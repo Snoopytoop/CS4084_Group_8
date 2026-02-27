@@ -7,7 +7,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="Hello World!\nSamuel Luke\nSimon Alexander \nSaif Khawaldeh"
+        android:text="Hello World!\nSamuel Luke\nSimon Alexander \nSaif Khawaldeh\nIwan Teague"
         android:textSize="24sp" />
 
 </FrameLayout>
