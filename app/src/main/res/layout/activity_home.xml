@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvHomeTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ClimbShare"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bottomNavCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp">
+
+            <ImageButton
+                android:id="@+id/btnNavHome"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Home"
+                android:src="@android:drawable/ic_menu_view" />
+
+            <ImageButton
+                android:id="@+id/btnNavPlaceholder1"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:alpha="0.35"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="false"
+                android:contentDescription="Reserved button"
+                android:enabled="false"
+                android:src="@android:drawable/ic_menu_add" />
+
+            <ImageButton
+                android:id="@+id/btnNavPlaceholder2"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:alpha="0.35"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="false"
+                android:contentDescription="Reserved button"
+                android:enabled="false"
+                android:src="@android:drawable/ic_menu_add" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivNavProfile"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:contentDescription="Open profile"
+                android:focusable="true"
+                android:padding="2dp"
+                android:scaleType="centerCrop"
+                android:src="@android:drawable/ic_menu_camera"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.CS4084.Circle" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
