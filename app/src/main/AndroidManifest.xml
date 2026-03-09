@@ -14,6 +14,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CS4084_Group_8">
         <activity
+            android:name=".UserProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
+            android:name=".ProfileSetupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
             android:name=".HomeActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />

@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             String email = user.getEmail() != null ? user.getEmail() : "";
-            ensureUserProfileExists(user, email);
+            upsertUserProfileAndRoute(user, email, false);
         }
     }
 
@@ -154,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
                                 userProfile.put("uid", currentUser.getUid());
                                 userProfile.put("email", email);
                                 userProfile.put("username", username);
+                                userProfile.put("profileCompleted", false);
                                 userProfile.put("createdAt", FieldValue.serverTimestamp());
                                 userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
@@ -164,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
                                             Log.d(TAG, "Profile write success for uid=" + currentUser.getUid());
                                             setLoading(false);
                                             Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
-                                            navigateToHome();
+                                            navigateToProfileSetup();
                                         })
                                         .addOnFailureListener(e -> {
                                             Log.e(TAG, "Profile write failed on register uid=" + currentUser.getUid(), e);
@@ -186,14 +187,14 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
 
-                        ensureUserProfileExists(currentUser, email);
+                        upsertUserProfileAndRoute(currentUser, email, true);
                     } else {
                         Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void ensureUserProfileExists(FirebaseUser currentUser, String email) {
+    private void upsertUserProfileAndRoute(FirebaseUser currentUser, String email, boolean showLoginToast) {
         String fallbackUsername = currentUser.getDisplayName();
         if (TextUtils.isEmpty(fallbackUsername)) {
             int atIndex = email.indexOf("@");
@@ -210,14 +211,30 @@ public class MainActivity extends AppCompatActivity {
                 .document(currentUser.getUid())
                 .set(userProfile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
-                    Log.d(TAG, "Profile write success on login uid=" + currentUser.getUid());
-                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
-                    navigateToHome();
+                    firebaseFirestore.collection("users")
+                            .document(currentUser.getUid())
+                            .get()
+                            .addOnSuccessListener(snapshot -> {
+                                Boolean profileCompleted = snapshot.getBoolean("profileCompleted");
+                                if (showLoginToast) {
+                                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                                }
+
+                                if (Boolean.TRUE.equals(profileCompleted)) {
+                                    navigateToHome();
+                                } else {
+                                    navigateToProfileSetup();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Profile read failed uid=" + currentUser.getUid(), e);
+                                navigateToProfileSetup();
+                            });
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
                     Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    navigateToHome();
+                    navigateToProfileSetup();
                 });
     }
 
@@ -248,6 +265,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToHome() {
         startActivity(new Intent(this, HomeActivity.class));
+        finish();
+    }
+
+    private void navigateToProfileSetup() {
+        startActivity(new Intent(this, ProfileSetupActivity.class));
         finish();
     }
 }
