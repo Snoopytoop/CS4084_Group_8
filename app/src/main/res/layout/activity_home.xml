@@ -16,6 +16,41 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/tvFeedLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Recent Posts"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvHomeTitle" />
+
+    <TextView
+        android:id="@+id/tvEmptyFeed"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_horizontal"
+        android:text="No posts yet. Tap + to create one."
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvFeedLabel" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPosts"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:paddingBottom="12dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvFeedLabel" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottomNavCard"
         android:layout_width="0dp"
@@ -45,15 +80,12 @@
                 android:src="@android:drawable/ic_menu_view" />
 
             <ImageButton
-                android:id="@+id/btnNavPlaceholder1"
+                android:id="@+id/btnNavCreatePost"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:alpha="0.35"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="false"
-                android:contentDescription="Reserved button"
-                android:enabled="false"
+                android:contentDescription="Create post"
                 android:src="@android:drawable/ic_menu_add" />
 
             <ImageButton
