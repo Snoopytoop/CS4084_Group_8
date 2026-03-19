@@ -108,7 +108,7 @@ public class UserProfileActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        loadCurrentUserProfile();
+        loadUserProfile();
     }
 
     @Override
@@ -120,20 +120,37 @@ public class UserProfileActivity extends AppCompatActivity {
         }
     }
 
-    private void loadCurrentUserProfile() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        currentUser = user;
-        if (user == null) {
+    private void loadUserProfile() {
+        String userIdFromIntent = getIntent().getStringExtra("USER_ID");
+        FirebaseUser loggedInUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        // Decide whose profile to load
+        String targetUserId;
+        if (!TextUtils.isEmpty(userIdFromIntent)) {
+            targetUserId = userIdFromIntent; // viewing another user
+        } else if (loggedInUser != null) {
+            targetUserId = loggedInUser.getUid(); // viewing own profile
+        } else {
             startActivity(new Intent(this, MainActivity.class));
             finish();
             return;
         }
 
-        tvEmail.setText(user.getEmail() == null ? "" : user.getEmail());
+        // If viewing own profile → show email, else hide it
+        if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
+            // Viewing your own profile
+            tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
+            tvEmail.setVisibility(View.VISIBLE);
+            btnSettings.setVisibility(View.VISIBLE); // show settings
+        } else {
+            // Viewing someone else's profile
+            tvEmail.setVisibility(View.GONE);
+            btnSettings.setVisibility(View.GONE); // hide settings
+        }
 
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(user.getUid())
+        // Load user data from Firestore
+        firestore.collection("users")
+                .document(targetUserId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     String username = snapshot.getString("username");
@@ -149,7 +166,9 @@ public class UserProfileActivity extends AppCompatActivity {
                         ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
                         ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
                     }
-                    listenForMyPosts(user.getUid());
+
+                    // Load THAT user's posts
+                    listenForMyPosts(targetUserId);
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());

@@ -18,7 +18,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Author"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_blue_dark"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
         <TextView
             android:id="@+id/tvPostContent"
