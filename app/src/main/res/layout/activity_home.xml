@@ -89,16 +89,17 @@
                 android:src="@android:drawable/ic_menu_add" />
 
             <ImageButton
-                android:id="@+id/btnNavPlaceholder2"
+                android:id="@+id/btnNavSearch"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:alpha="0.35"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="false"
-                android:contentDescription="Reserved button"
-                android:enabled="false"
-                android:src="@android:drawable/ic_menu_add" />
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Search"
+                android:enabled="true"
+                android:alpha="1.0"
+                android:src="@android:drawable/ic_menu_search" />
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivNavProfile"
