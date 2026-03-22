@@ -33,11 +33,13 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText etUsername;
     private TextInputEditText etPassword;
     private MaterialButton btnRegister;
+    private MaterialButton btnRootLogin;
     private TextView tvTitle;
     private TextView tvSwitchMode;
 
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
+    private boolean firebaseEnabled;
     private boolean isRegisterMode = true;
 
     @Override
@@ -46,11 +48,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         bindViews();
-        firebaseAuth = FirebaseAuth.getInstance();
-        firebaseFirestore = FirebaseFirestore.getInstance();
-        Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
+        firebaseEnabled = !FirebaseApp.getApps(this).isEmpty();
+        if (firebaseEnabled) {
+            firebaseAuth = FirebaseAuth.getInstance();
+            firebaseFirestore = FirebaseFirestore.getInstance();
+            Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
+        } else {
+            Log.w(TAG, "Firebase is not configured for this build.");
+            setUserAuthEnabled(false);
+            Toast.makeText(this, R.string.member_auth_unavailable_toast, Toast.LENGTH_LONG).show();
+        }
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
+        btnRootLogin.setOnClickListener(v -> startActivity(new Intent(this, RootLoginActivity.class)));
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -63,6 +73,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        if (!firebaseEnabled) {
+            return;
+        }
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             String email = user.getEmail() != null ? user.getEmail() : "";
@@ -78,11 +92,20 @@ public class MainActivity extends AppCompatActivity {
         etUsername = findViewById(R.id.etUsername);
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
+        btnRootLogin = findViewById(R.id.btnRootLogin);
         tvTitle = findViewById(R.id.tvTitle);
         tvSwitchMode = findViewById(R.id.tvSwitchMode);
     }
 
     private void updateAuthModeUi() {
+        if (!firebaseEnabled) {
+            tvTitle.setText(R.string.member_auth_unavailable_title);
+            btnRegister.setText(R.string.member_auth_unavailable_button);
+            tvSwitchMode.setText(R.string.member_auth_unavailable_message);
+            tilUsername.setVisibility(View.GONE);
+            return;
+        }
+
         if (isRegisterMode) {
             tvTitle.setText("Create Account");
             btnRegister.setText("Register");
@@ -97,6 +120,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleAuthAction() {
+        if (!firebaseEnabled) {
+            Toast.makeText(this, R.string.member_auth_unavailable_toast, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         clearInputErrors();
 
         String email = valueOf(etEmail);
@@ -222,8 +250,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean isLoading) {
-        btnRegister.setEnabled(!isLoading);
-        tvSwitchMode.setEnabled(!isLoading);
+        btnRegister.setEnabled(!isLoading && firebaseEnabled);
+        btnRootLogin.setEnabled(!isLoading);
+        tvSwitchMode.setEnabled(!isLoading && firebaseEnabled);
+    }
+
+    private void setUserAuthEnabled(boolean isEnabled) {
+        tilEmail.setEnabled(isEnabled);
+        tilUsername.setEnabled(isEnabled);
+        tilPassword.setEnabled(isEnabled);
+        etEmail.setEnabled(isEnabled);
+        etUsername.setEnabled(isEnabled);
+        etPassword.setEnabled(isEnabled);
+        btnRegister.setEnabled(isEnabled);
+        tvSwitchMode.setEnabled(isEnabled);
     }
 
     private void clearInputErrors() {

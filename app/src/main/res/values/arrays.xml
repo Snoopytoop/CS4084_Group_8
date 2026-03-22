@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="route_send_status_options">
+        <item>Sent</item>
+        <item>Flashed</item>
+        <item>Project</item>
+        <item>Repeat</item>
+    </string-array>
+</resources>

@@ -14,6 +14,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CS4084_Group_8">
         <activity
+            android:name=".RouteLogActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
+            android:name=".RootDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
+            android:name=".RootLoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
             android:name=".HomeActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
