@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseUser;
 public class HomeActivity extends AppCompatActivity {
     private TextView tvHomeTitle;
     private TextView tvHomeSubtitle;
+    private MaterialButton btnFindBelayer;
     private MaterialButton btnRouteLog;
     private MaterialButton btnSignOut;
 
@@ -23,10 +24,12 @@ public class HomeActivity extends AppCompatActivity {
 
         tvHomeTitle = findViewById(R.id.tvHomeTitle);
         tvHomeSubtitle = findViewById(R.id.tvHomeSubtitle);
+        btnFindBelayer = findViewById(R.id.btnFindBelayer);
         btnRouteLog = findViewById(R.id.btnRouteLog);
         btnSignOut = findViewById(R.id.btnSignOut);
 
         bindCurrentUser();
+        btnFindBelayer.setOnClickListener(view -> startActivity(new Intent(this, FindBelayerActivity.class)));
         btnRouteLog.setOnClickListener(view -> startActivity(new Intent(this, RouteLogActivity.class)));
         btnSignOut.setOnClickListener(view -> signOut());
     }
