@@ -2,20 +2,37 @@ package com.example.cs4084_group_8;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class UserProfileActivity extends AppCompatActivity {
     private static final int MENU_EDIT_PROFILE_ID = 1001;
@@ -28,8 +45,17 @@ public class UserProfileActivity extends AppCompatActivity {
     private TextView tvEmail;
     private TextView tvBio;
     private ImageButton btnSettings;
+    private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
+    private ImageButton btnNavCreatePost;
     private ShapeableImageView ivNavProfile;
+    private RecyclerView rvMyPosts;
+    private TextView tvEmptyMyPosts;
+
+    private FirebaseFirestore firestore;
+    private FirebaseUser currentUser;
+    private PostAdapter postAdapter;
+    private ListenerRegistration myPostsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,14 +67,39 @@ public class UserProfileActivity extends AppCompatActivity {
         tvEmail = findViewById(R.id.tvEmail);
         tvBio = findViewById(R.id.tvBio);
         btnSettings = findViewById(R.id.btnSettings);
+        btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
+        btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
+        rvMyPosts = findViewById(R.id.rvMyPosts);
+        tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
+
+        firestore = FirebaseFirestore.getInstance();
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        postAdapter = new PostAdapter(
+                currentUser != null ? currentUser.getUid() : "",
+                new PostAdapter.PostActionListener() {
+                    @Override
+                    public void onLikeClick(Post post) {
+                        toggleLike(post);
+                    }
+
+                    @Override
+                    public void onCommentClick(Post post) {
+                        showCommentDialog(post);
+                    }
+                }
+        );
+        rvMyPosts.setLayoutManager(new LinearLayoutManager(this));
+        rvMyPosts.setAdapter(postAdapter);
 
         btnSettings.setOnClickListener(v -> showSettingsMenu());
+        btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
         });
+        btnNavCreatePost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
         ivNavProfile.setOnClickListener(v -> {
             // Already on profile.
         });
@@ -57,22 +108,49 @@ public class UserProfileActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        loadCurrentUserProfile();
+        loadUserProfile();
     }
 
-    private void loadCurrentUserProfile() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (myPostsListener != null) {
+            myPostsListener.remove();
+            myPostsListener = null;
+        }
+    }
+
+    private void loadUserProfile() {
+        String userIdFromIntent = getIntent().getStringExtra("USER_ID");
+        FirebaseUser loggedInUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        // Decide whose profile to load
+        String targetUserId;
+        if (!TextUtils.isEmpty(userIdFromIntent)) {
+            targetUserId = userIdFromIntent; // viewing another user
+        } else if (loggedInUser != null) {
+            targetUserId = loggedInUser.getUid(); // viewing own profile
+        } else {
             startActivity(new Intent(this, MainActivity.class));
             finish();
             return;
         }
 
-        tvEmail.setText(user.getEmail() == null ? "" : user.getEmail());
+        // If viewing own profile → show email, else hide it
+        if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
+            // Viewing your own profile
+            tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
+            tvEmail.setVisibility(View.VISIBLE);
+            btnSettings.setVisibility(View.VISIBLE); // show settings
+        } else {
+            // Viewing someone else's profile
+            tvEmail.setVisibility(View.GONE);
+            btnSettings.setVisibility(View.GONE); // hide settings
+        }
 
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(user.getUid())
+        // Load user data from Firestore
+        firestore.collection("users")
+                .document(targetUserId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     String username = snapshot.getString("username");
@@ -88,9 +166,148 @@ public class UserProfileActivity extends AppCompatActivity {
                         ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
                         ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
                     }
+
+                    // Load THAT user's posts
+                    listenForMyPosts(targetUserId);
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void listenForMyPosts(String uid) {
+        if (myPostsListener != null) {
+            myPostsListener.remove();
+        }
+        myPostsListener = firestore.collection("posts")
+                .whereEqualTo("authorUid", uid)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Toast.makeText(this, "Failed to load posts: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    List<Post> posts = new ArrayList<>();
+                    if (value != null) {
+                        value.getDocuments().forEach(documentSnapshot -> {
+                            Post post = documentSnapshot.toObject(Post.class);
+                            if (post != null) {
+                                post.setId(documentSnapshot.getId());
+                                posts.add(post);
+                            }
+                        });
+                    }
+                    Collections.sort(posts, Comparator.comparing(Post::getCreatedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+                    postAdapter.submitList(posts);
+                    tvEmptyMyPosts.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+    }
+
+    private void toggleLike(Post post) {
+        if (currentUser == null || TextUtils.isEmpty(post.getId())) {
+            return;
+        }
+        firestore.collection("posts")
+                .document(post.getId())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    Post latestPost = snapshot.toObject(Post.class);
+                    if (latestPost == null) {
+                        return;
+                    }
+                    List<String> likedBy = latestPost.getLikedBy();
+                    boolean alreadyLiked = likedBy.contains(currentUser.getUid());
+
+                    Map<String, Object> updates = new HashMap<>();
+                    if (alreadyLiked) {
+                        updates.put("likedBy", FieldValue.arrayRemove(currentUser.getUid()));
+                        updates.put("likesCount", FieldValue.increment(-1));
+                    } else {
+                        updates.put("likedBy", FieldValue.arrayUnion(currentUser.getUid()));
+                        updates.put("likesCount", FieldValue.increment(1));
+                    }
+
+                    firestore.collection("posts")
+                            .document(post.getId())
+                            .update(updates);
+                });
+    }
+
+    private void showCommentDialog(Post post) {
+        if (TextUtils.isEmpty(post.getId())) {
+            return;
+        }
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View dialogView = inflater.inflate(R.layout.dialog_add_comment, null);
+        TextView tvExistingComments = dialogView.findViewById(R.id.tvExistingComments);
+        EditText etComment = dialogView.findViewById(R.id.etComment);
+        etComment.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+
+        firestore.collection("posts")
+                .document(post.getId())
+                .collection("comments")
+                .orderBy("createdAt", Query.Direction.ASCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        tvExistingComments.setText("No comments yet.");
+                    } else {
+                        StringBuilder builder = new StringBuilder();
+                        queryDocumentSnapshots.getDocuments().forEach(commentDoc -> {
+                            String authorName = commentDoc.getString("authorName");
+                            String text = commentDoc.getString("text");
+                            if (!TextUtils.isEmpty(text)) {
+                                builder.append(TextUtils.isEmpty(authorName) ? "User" : authorName)
+                                        .append(": ")
+                                        .append(text)
+                                        .append("\n\n");
+                            }
+                        });
+                        tvExistingComments.setText(builder.toString().trim());
+                    }
+                });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Comments")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Post", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (currentUser == null) {
+                dialog.dismiss();
+                return;
+            }
+            String commentText = etComment.getText() == null ? "" : etComment.getText().toString().trim();
+            if (TextUtils.isEmpty(commentText)) {
+                etComment.setError("Comment cannot be empty");
+                return;
+            }
+
+            firestore.collection("users")
+                    .document(currentUser.getUid())
+                    .get()
+                    .addOnSuccessListener(userSnapshot -> {
+                        String authorName = userSnapshot.getString("username");
+                        Map<String, Object> commentData = new HashMap<>();
+                        commentData.put("authorUid", currentUser.getUid());
+                        commentData.put("authorName", TextUtils.isEmpty(authorName) ? "User" : authorName);
+                        commentData.put("text", commentText);
+                        commentData.put("createdAt", FieldValue.serverTimestamp());
+
+                        firestore.collection("posts")
+                                .document(post.getId())
+                                .collection("comments")
+                                .add(commentData)
+                                .addOnSuccessListener(unused -> firestore.collection("posts")
+                                        .document(post.getId())
+                                        .update("commentsCount", FieldValue.increment(1))
+                                        .addOnSuccessListener(unused2 -> dialog.dismiss())
+                                        .addOnFailureListener(e -> Toast.makeText(this, "Comment saved, count update failed.", Toast.LENGTH_SHORT).show()))
+                                .addOnFailureListener(e -> Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    });
+        }));
+        dialog.show();
     }
 
     private void loadProfileImages(String imageUrl) {
