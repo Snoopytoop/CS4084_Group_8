@@ -1,16 +1,23 @@
 package com.example.cs4084_group_8;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 import android.text.TextUtils;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -35,6 +42,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private ImageView ivSelectedPostImage;
     private MaterialButton btnPickPostImage;
     private MaterialButton btnPublishPost;
+    private ShapeableImageView ivNavProfile;
 
     private FirebaseFirestore firestore;
     private FirebaseStorage storage;
@@ -55,6 +63,17 @@ public class CreatePostActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_post);
+
+        // Adjust nav bar position for gesture/button navigation
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
+        });
+
         firestore = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -65,6 +84,7 @@ public class CreatePostActivity extends AppCompatActivity {
         }
 
         bindViews();
+        setupNavigation();
         btnPickPostImage.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
         btnPublishPost.setOnClickListener(v -> publishPost());
     }
@@ -75,6 +95,29 @@ public class CreatePostActivity extends AppCompatActivity {
         ivSelectedPostImage = findViewById(R.id.ivSelectedPostImage);
         btnPickPostImage = findViewById(R.id.btnPickPostImage);
         btnPublishPost = findViewById(R.id.btnPublishPost);
+    }
+
+    private void setupNavigation() {
+        ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
+        ivNavProfile = findViewById(R.id.ivNavProfile);
+
+        btnNavHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, HomeActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavLeaderboard.setOnClickListener(v -> {
+            startActivity(new Intent(this, LeaderboardActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavCreatePost.setOnClickListener(v -> {
+            // Already on create post
+        });
+        ivNavProfile.setOnClickListener(v -> {
+            startActivity(new Intent(this, UserProfileActivity.class));
+            overridePendingTransition(0, 0);
+        });
     }
 
     private void publishPost() {

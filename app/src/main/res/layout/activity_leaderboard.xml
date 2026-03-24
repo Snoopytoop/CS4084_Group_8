@@ -134,65 +134,12 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/bottomNavCard"
+    <include
+        layout="@layout/bottom_nav"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="8dp">
-
-            <ImageButton
-                android:id="@+id/btnNavHome"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Home"
-                android:src="@android:drawable/ic_menu_view" />
-
-            <ImageButton
-                android:id="@+id/btnNavLeaderboard"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Leaderboard"
-                android:src="@android:drawable/ic_menu_sort_by_size" />
-
-            <ImageButton
-                android:id="@+id/btnNavCreatePost"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Create post"
-                android:src="@android:drawable/ic_menu_add" />
-
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivNavProfile"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="8dp"
-                android:clickable="true"
-                android:contentDescription="Open profile"
-                android:focusable="true"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_camera"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.CS4084.Circle" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
