@@ -26,6 +26,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.DocumentReference;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +49,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
     private ImageButton btnNavCreatePost;
+    private ImageButton btnNavLeaderboard;
     private ShapeableImageView ivNavProfile;
     private RecyclerView rvMyPosts;
     private TextView tvEmptyMyPosts;
@@ -70,6 +72,7 @@ public class UserProfileActivity extends AppCompatActivity {
         btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
+        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         rvMyPosts = findViewById(R.id.rvMyPosts);
         tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
@@ -100,6 +103,7 @@ public class UserProfileActivity extends AppCompatActivity {
             finish();
         });
         btnNavCreatePost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
+        btnNavLeaderboard.setOnClickListener(v -> startActivity(new Intent(this, LeaderboardActivity.class)));
         ivNavProfile.setOnClickListener(v -> {
             // Already on profile.
         });
@@ -206,30 +210,27 @@ public class UserProfileActivity extends AppCompatActivity {
         if (currentUser == null || TextUtils.isEmpty(post.getId())) {
             return;
         }
-        firestore.collection("posts")
-                .document(post.getId())
-                .get()
-                .addOnSuccessListener(snapshot -> {
+        DocumentReference postRef = firestore.collection("posts").document(post.getId());
+        firestore.runTransaction(transaction -> {
+                    com.google.firebase.firestore.DocumentSnapshot snapshot = transaction.get(postRef);
                     Post latestPost = snapshot.toObject(Post.class);
                     if (latestPost == null) {
-                        return;
+                        throw new IllegalStateException("Post not found");
                     }
                     List<String> likedBy = latestPost.getLikedBy();
                     boolean alreadyLiked = likedBy.contains(currentUser.getUid());
+                    long currentLikes = Math.max(0, latestPost.getLikesCount());
+                    long updatedLikes = alreadyLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
 
-                    Map<String, Object> updates = new HashMap<>();
-                    if (alreadyLiked) {
-                        updates.put("likedBy", FieldValue.arrayRemove(currentUser.getUid()));
-                        updates.put("likesCount", FieldValue.increment(-1));
-                    } else {
-                        updates.put("likedBy", FieldValue.arrayUnion(currentUser.getUid()));
-                        updates.put("likesCount", FieldValue.increment(1));
-                    }
-
-                    firestore.collection("posts")
-                            .document(post.getId())
-                            .update(updates);
-                });
+                    transaction.update(postRef, "likedBy",
+                            alreadyLiked
+                                    ? FieldValue.arrayRemove(currentUser.getUid())
+                                    : FieldValue.arrayUnion(currentUser.getUid()));
+                    transaction.update(postRef, "likesCount", updatedLikes);
+                    return null;
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to update like: " + e.getMessage(), Toast.LENGTH_LONG).show());
     }
 
     private void showCommentDialog(Post post) {
@@ -295,15 +296,16 @@ public class UserProfileActivity extends AppCompatActivity {
                         commentData.put("text", commentText);
                         commentData.put("createdAt", FieldValue.serverTimestamp());
 
-                        firestore.collection("posts")
+                        DocumentReference commentRef = firestore.collection("posts")
                                 .document(post.getId())
                                 .collection("comments")
-                                .add(commentData)
-                                .addOnSuccessListener(unused -> firestore.collection("posts")
-                                        .document(post.getId())
-                                        .update("commentsCount", FieldValue.increment(1))
-                                        .addOnSuccessListener(unused2 -> dialog.dismiss())
-                                        .addOnFailureListener(e -> Toast.makeText(this, "Comment saved, count update failed.", Toast.LENGTH_SHORT).show()))
+                                .document();
+                        DocumentReference postRef = firestore.collection("posts").document(post.getId());
+                        firestore.runBatch(batch -> {
+                                    batch.set(commentRef, commentData);
+                                    batch.update(postRef, "commentsCount", FieldValue.increment(1));
+                                })
+                                .addOnSuccessListener(unused -> dialog.dismiss())
                                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show());
                     });
         }));

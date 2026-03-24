@@ -23,6 +23,8 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -176,7 +178,6 @@ public class LeaderboardActivity extends AppCompatActivity {
 
         userListener = firestore.collection("leaderboard")
                 .whereEqualTo("uid", currentUser.getUid())
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
                         Toast.makeText(this, "Failed to load your history: " + error.getMessage(), Toast.LENGTH_LONG).show();
@@ -192,6 +193,10 @@ public class LeaderboardActivity extends AppCompatActivity {
                             }
                         });
                     }
+                    Collections.sort(history, Comparator.comparing(
+                            LeaderboardEntry::getCreatedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())
+                    ).reversed());
                     userAdapter.setEntries(history);
                 });
     }

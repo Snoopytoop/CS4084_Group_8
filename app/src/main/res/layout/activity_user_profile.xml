@@ -165,24 +165,21 @@
                 android:src="@android:drawable/ic_menu_view" />
 
             <ImageButton
+                android:id="@+id/btnNavLeaderboard"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Leaderboard"
+                android:src="@android:drawable/ic_menu_sort_by_size" />
+
+            <ImageButton
                 android:id="@+id/btnNavCreatePost"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Create post"
-                android:src="@android:drawable/ic_menu_add" />
-
-            <ImageButton
-                android:id="@+id/btnNavPlaceholder2"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:alpha="0.35"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="false"
-                android:contentDescription="Reserved button"
-                android:enabled="false"
                 android:src="@android:drawable/ic_menu_add" />
 
             <com.google.android.material.imageview.ShapeableImageView
