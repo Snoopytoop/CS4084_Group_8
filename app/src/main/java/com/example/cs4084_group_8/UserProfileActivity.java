@@ -6,6 +6,7 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -15,6 +16,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -101,11 +104,28 @@ public class UserProfileActivity extends AppCompatActivity {
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
+            overridePendingTransition(0, 0);
         });
-        btnNavCreatePost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
-        btnNavLeaderboard.setOnClickListener(v -> startActivity(new Intent(this, LeaderboardActivity.class)));
+        btnNavCreatePost.setOnClickListener(v -> {
+            startActivity(new Intent(this, CreatePostActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavLeaderboard.setOnClickListener(v -> {
+            startActivity(new Intent(this, LeaderboardActivity.class));
+            overridePendingTransition(0, 0);
+        });
         ivNavProfile.setOnClickListener(v -> {
             // Already on profile.
+        });
+
+        // Adjust nav bar position for gesture/button navigation
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
         });
     }
 

@@ -4,12 +4,15 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -82,12 +85,31 @@ public class LeaderboardActivity extends AppCompatActivity {
 
         btnSubmitTime.setOnClickListener(v -> submitNewTime());
 
-        btnNavHome.setOnClickListener(v -> startActivity(new Intent(this, HomeActivity.class)));
-        btnNavLeaderboard.setOnClickListener(v -> {
-            // already on leaderboard
+        btnNavHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, HomeActivity.class));
+            overridePendingTransition(0, 0);
         });
-        btnNavCreatePost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
-        ivNavProfile.setOnClickListener(v -> startActivity(new Intent(this, UserProfileActivity.class)));
+        btnNavLeaderboard.setOnClickListener(v -> {
+            // Already on leaderboard
+        });
+        btnNavCreatePost.setOnClickListener(v -> {
+            startActivity(new Intent(this, CreatePostActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        ivNavProfile.setOnClickListener(v -> {
+            startActivity(new Intent(this, UserProfileActivity.class));
+            overridePendingTransition(0, 0);
+        });
+
+        // Adjust nav bar position for gesture/button navigation
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
+        });
 
         loadLeaderboard();
     }
