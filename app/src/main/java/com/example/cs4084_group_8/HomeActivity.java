@@ -51,6 +51,7 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         rvPosts = findViewById(R.id.rvPosts);
@@ -79,6 +80,8 @@ public class HomeActivity extends AppCompatActivity {
         btnNavHome.setOnClickListener(v -> {
             // Already on home.
         });
+        btnNavLeaderboard.setOnClickListener(v ->
+                startActivity(new Intent(this, LeaderboardActivity.class)));
         ivNavProfile.setOnClickListener(v ->
                 startActivity(new Intent(this, UserProfileActivity.class)));
         btnNavCreatePost.setOnClickListener(v ->
