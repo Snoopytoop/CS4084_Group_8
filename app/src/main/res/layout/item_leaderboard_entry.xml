@@ -22,14 +22,28 @@
             android:textStyle="bold"
             android:textSize="18sp" />
 
-        <TextView
-            android:id="@+id/tvPlayerName"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Player"
-            android:textSize="16sp" />
+            android:orientation="vertical"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:id="@+id/tvPlayerName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Player"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2026-03-24 12:34"
+                android:textSize="12sp"
+                android:textColor="#666" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvTime"

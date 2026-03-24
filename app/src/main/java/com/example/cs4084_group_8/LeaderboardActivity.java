@@ -30,14 +30,19 @@ import java.util.Map;
 public class LeaderboardActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
-    private ListenerRegistration leaderboardListener;
-    private LeaderboardAdapter adapter;
+    private ListenerRegistration bestListener;
+    private ListenerRegistration userListener;
+    private LeaderboardAdapter bestAdapter;
+    private LeaderboardAdapter userAdapter;
 
-    private RecyclerView rvLeaderboard;
+    private RecyclerView rvBestLeaderboard;
+    private RecyclerView rvUserHistory;
+    private TextView tvSectionLabel;
+    private Button btnGlobal;
+    private Button btnPersonal;
     private EditText etSeconds;
     private EditText etMilliseconds;
     private Button btnSubmitTime;
-    private TextView tvEmpty;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,20 +52,31 @@ public class LeaderboardActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        rvLeaderboard = findViewById(R.id.rvLeaderboard);
+        rvBestLeaderboard = findViewById(R.id.rvBestLeaderboard);
+        rvUserHistory = findViewById(R.id.rvUserHistory);
+        tvSectionLabel = findViewById(R.id.tvSectionLabel);
+        btnGlobal = findViewById(R.id.btnGlobal);
+        btnPersonal = findViewById(R.id.btnPersonal);
         etSeconds = findViewById(R.id.etSeconds);
         etMilliseconds = findViewById(R.id.etMilliseconds);
         btnSubmitTime = findViewById(R.id.btnSubmitTime);
-        tvEmpty = findViewById(R.id.tvEmptyLeaderboard);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ShapeableImageView ivNavProfile = findViewById(R.id.ivNavProfile);
 
-        adapter = new LeaderboardAdapter();
-        rvLeaderboard.setLayoutManager(new LinearLayoutManager(this));
-        rvLeaderboard.setAdapter(adapter);
+        bestAdapter = new LeaderboardAdapter();
+        rvBestLeaderboard.setLayoutManager(new LinearLayoutManager(this));
+        rvBestLeaderboard.setAdapter(bestAdapter);
+
+        userAdapter = new LeaderboardAdapter();
+        rvUserHistory.setLayoutManager(new LinearLayoutManager(this));
+        rvUserHistory.setAdapter(userAdapter);
+
+        btnGlobal.setOnClickListener(v -> showGlobal());
+        btnPersonal.setOnClickListener(v -> showPersonal());
+        showGlobal();
 
         btnSubmitTime.setOnClickListener(v -> submitNewTime());
 
@@ -78,41 +94,105 @@ public class LeaderboardActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        loadLeaderboard();
+    }
+
+    private void showGlobal() {
+        tvSectionLabel.setText("Global best per user");
+        btnGlobal.setEnabled(false);
+        btnPersonal.setEnabled(true);
+        rvBestLeaderboard.setVisibility(View.VISIBLE);
+        rvUserHistory.setVisibility(View.GONE);
+    }
+
+    private void showPersonal() {
+        tvSectionLabel.setText("Your personal history");
+        btnGlobal.setEnabled(true);
+        btnPersonal.setEnabled(false);
+        rvBestLeaderboard.setVisibility(View.GONE);
+        rvUserHistory.setVisibility(View.VISIBLE);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (leaderboardListener != null) {
-            leaderboardListener.remove();
-            leaderboardListener = null;
+        if (bestListener != null) {
+            bestListener.remove();
+            bestListener = null;
+        }
+        if (userListener != null) {
+            userListener.remove();
+            userListener = null;
         }
     }
 
     private void loadLeaderboard() {
-        if (leaderboardListener != null) {
-            leaderboardListener.remove();
+        loadBestPerUser();
+        loadUserHistory();
+    }
+
+    private void loadBestPerUser() {
+        if (bestListener != null) {
+            bestListener.remove();
         }
-        leaderboardListener = firestore.collection("leaderboard")
+        bestListener = firestore.collection("leaderboard")
                 .orderBy("totalMs", Query.Direction.ASCENDING)
-                .limit(100)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
-                        Toast.makeText(this, "Failed to load leaderboard: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Failed to load best leaderboard: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
-                    List<LeaderboardEntry> ranking = new ArrayList<>();
+                    Map<String, LeaderboardEntry> bestByUser = new HashMap<>();
                     if (value != null) {
                         value.getDocuments().forEach(document -> {
                             LeaderboardEntry entry = document.toObject(LeaderboardEntry.class);
                             if (entry != null) {
                                 entry.setId(document.getId());
-                                ranking.add(entry);
+                                String uid = entry.getUid();
+                                if (uid == null || uid.isEmpty()) return;
+                                LeaderboardEntry existing = bestByUser.get(uid);
+                                if (existing == null || entry.getTotalMs() < existing.getTotalMs()) {
+                                    bestByUser.put(uid, entry);
+                                }
                             }
                         });
                     }
-                    adapter.setEntries(ranking);
-                    tvEmpty.setVisibility(ranking.isEmpty() ? View.VISIBLE : View.GONE);
+
+                    List<LeaderboardEntry> bestList = new ArrayList<>(bestByUser.values());
+                    bestList.sort((a, b) -> Long.compare(a.getTotalMs(), b.getTotalMs()));
+                    bestAdapter.setEntries(bestList);
+                });
+    }
+
+    private void loadUserHistory() {
+        if (userListener != null) {
+            userListener.remove();
+        }
+
+        if (currentUser == null) {
+            userAdapter.setEntries(new ArrayList<>());
+            return;
+        }
+
+        userListener = firestore.collection("leaderboard")
+                .whereEqualTo("uid", currentUser.getUid())
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Toast.makeText(this, "Failed to load your history: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    List<LeaderboardEntry> history = new ArrayList<>();
+                    if (value != null) {
+                        value.getDocuments().forEach(document -> {
+                            LeaderboardEntry entry = document.toObject(LeaderboardEntry.class);
+                            if (entry != null) {
+                                entry.setId(document.getId());
+                                history.add(entry);
+                            }
+                        });
+                    }
+                    userAdapter.setEntries(history);
                 });
     }
 

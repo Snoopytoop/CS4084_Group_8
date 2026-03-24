@@ -39,6 +39,13 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         long seconds = entry.getSeconds();
         long milliseconds = entry.getMilliseconds();
         holder.tvTime.setText(String.format("%d.%03ds", seconds, milliseconds));
+
+        String dateText = "-";
+        if (entry.getCreatedAt() != null) {
+            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+            dateText = format.format(entry.getCreatedAt().toDate());
+        }
+        holder.tvDate.setText(dateText);
     }
 
     @Override
@@ -50,12 +57,15 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         TextView tvRank;
         TextView tvPlayerName;
         TextView tvTime;
+        TextView tvDate;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvRank = itemView.findViewById(R.id.tvRank);
             tvPlayerName = itemView.findViewById(R.id.tvPlayerName);
             tvTime = itemView.findViewById(R.id.tvTime);
+            tvDate = itemView.findViewById(R.id.tvDate);
         }
     }
 }
+
