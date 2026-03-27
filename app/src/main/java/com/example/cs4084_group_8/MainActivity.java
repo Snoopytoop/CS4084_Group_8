@@ -26,6 +26,7 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityAuth";
+    private static final String USERS_COLLECTION = "users";
     private TextInputLayout tilEmail;
     private TextInputLayout tilUsername;
     private TextInputLayout tilPassword;
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
-        btnRootLogin.setOnClickListener(v -> startActivity(new Intent(this, RootLoginActivity.class)));
+        btnRootLogin.setOnClickListener(v -> startActivity(new Intent(this, AdminLoginActivity.class)));
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -77,10 +78,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user != null) {
-            String email = user.getEmail() != null ? user.getEmail() : "";
-            ensureUserProfileExists(user, email);
+            handleExistingSignedInUser(user);
         }
     }
 
@@ -182,10 +182,11 @@ public class MainActivity extends AppCompatActivity {
                                 userProfile.put("uid", currentUser.getUid());
                                 userProfile.put("email", email);
                                 userProfile.put("username", username);
+                                userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
                                 userProfile.put("createdAt", FieldValue.serverTimestamp());
                                 userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
-                                firebaseFirestore.collection("users")
+                                firebaseFirestore.collection(USERS_COLLECTION)
                                         .document(currentUser.getUid())
                                         .set(userProfile, SetOptions.merge())
                                         .addOnSuccessListener(unused -> {
@@ -214,39 +215,96 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
 
-                        ensureUserProfileExists(currentUser, email);
+                        validateAndNavigateMemberLogin(currentUser, email);
                     } else {
                         Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void ensureUserProfileExists(FirebaseUser currentUser, String email) {
-        String fallbackUsername = currentUser.getDisplayName();
-        if (TextUtils.isEmpty(fallbackUsername)) {
-            int atIndex = email.indexOf("@");
-            fallbackUsername = atIndex > 0 ? email.substring(0, atIndex) : "climber";
-        }
+    private void validateAndNavigateMemberLogin(FirebaseUser currentUser, String email) {
+        firebaseFirestore.collection(USERS_COLLECTION)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                        setLoading(false);
+                        firebaseAuth.signOut();
+                        Toast.makeText(this, R.string.admin_use_admin_login_toast, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    syncMemberProfileAndNavigate(currentUser, email, true, true);
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Toast.makeText(this, "Unable to verify account role: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void handleExistingSignedInUser(FirebaseUser currentUser) {
+        String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+        firebaseFirestore.collection(USERS_COLLECTION)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                        navigateToAdminDashboard();
+                        return;
+                    }
+                    syncMemberProfileAndNavigate(currentUser, email, false, false);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Role lookup failed for uid=" + currentUser.getUid(), e);
+                });
+    }
+
+    private void syncMemberProfileAndNavigate(
+            FirebaseUser currentUser,
+            String email,
+            boolean showSuccessToast,
+            boolean shouldClearLoading
+    ) {
+        String fallbackUsername = buildFallbackUsername(currentUser, email);
 
         Map<String, Object> userProfile = new HashMap<>();
         userProfile.put("uid", currentUser.getUid());
         userProfile.put("email", email);
         userProfile.put("username", fallbackUsername);
+        userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
         userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
-        firebaseFirestore.collection("users")
+        firebaseFirestore.collection(USERS_COLLECTION)
                 .document(currentUser.getUid())
                 .set(userProfile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
-                    Log.d(TAG, "Profile write success on login uid=" + currentUser.getUid());
-                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Member profile sync success uid=" + currentUser.getUid());
+                    if (shouldClearLoading) {
+                        setLoading(false);
+                    }
+                    if (showSuccessToast) {
+                        Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                    }
                     navigateToHome();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
+                    Log.e(TAG, "Member profile sync failed uid=" + currentUser.getUid(), e);
+                    if (shouldClearLoading) {
+                        setLoading(false);
+                    }
                     Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     navigateToHome();
                 });
+    }
+
+    private String buildFallbackUsername(FirebaseUser currentUser, String email) {
+        String fallbackUsername = currentUser.getDisplayName();
+        if (TextUtils.isEmpty(fallbackUsername)) {
+            int atIndex = email.indexOf("@");
+            fallbackUsername = atIndex > 0 ? email.substring(0, atIndex) : "climber";
+        }
+        return fallbackUsername;
     }
 
     private void setLoading(boolean isLoading) {
@@ -288,6 +346,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToHome() {
         startActivity(new Intent(this, HomeActivity.class));
+        finish();
+    }
+
+    private void navigateToAdminDashboard() {
+        startActivity(new Intent(this, AdminDashboardActivity.class));
         finish();
     }
 }
