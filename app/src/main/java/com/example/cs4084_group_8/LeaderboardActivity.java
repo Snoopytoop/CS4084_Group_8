@@ -11,6 +11,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.appcompat.app.AppCompatActivity;
@@ -72,10 +73,12 @@ public class LeaderboardActivity extends AppCompatActivity {
         ShapeableImageView ivNavProfile = findViewById(R.id.ivNavProfile);
 
         bestAdapter = new LeaderboardAdapter();
+        bestAdapter.setOnEntryLongClickListener(this::showDeleteDialog);
         rvBestLeaderboard.setLayoutManager(new LinearLayoutManager(this));
         rvBestLeaderboard.setAdapter(bestAdapter);
 
         userAdapter = new LeaderboardAdapter();
+        userAdapter.setOnEntryLongClickListener(this::showDeleteDialog);
         rvUserHistory.setLayoutManager(new LinearLayoutManager(this));
         rvUserHistory.setAdapter(userAdapter);
 
@@ -111,6 +114,7 @@ public class LeaderboardActivity extends AppCompatActivity {
             return insets;
         });
 
+        updateAdapterUserIds();
         loadLeaderboard();
     }
 
@@ -118,7 +122,16 @@ public class LeaderboardActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        updateAdapterUserIds();
         loadLeaderboard();
+    }
+
+    private void updateAdapterUserIds() {
+        if (currentUser != null) {
+            String uid = currentUser.getUid();
+            if (bestAdapter != null) bestAdapter.setCurrentUserId(uid);
+            if (userAdapter != null) userAdapter.setCurrentUserId(uid);
+        }
     }
 
     private void showGlobal() {
@@ -286,5 +299,38 @@ public class LeaderboardActivity extends AppCompatActivity {
                             .addOnFailureListener(e -> Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Unable to load user profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    public void showDeleteDialog(LeaderboardEntry entry) {
+        if (currentUser == null || entry.getUid() == null || !currentUser.getUid().equals(entry.getUid())) {
+            Toast.makeText(this, "You can only delete your own times.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Entry")
+                .setMessage("Are you sure you want to delete this time?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    deleteEntry(entry.getId());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteEntry(String docId) {
+        if (docId == null || docId.isEmpty()) {
+            Toast.makeText(this, "Error: Document ID is missing.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        firestore.collection("leaderboard")
+                .document(docId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Entry deleted successfully.", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 }
