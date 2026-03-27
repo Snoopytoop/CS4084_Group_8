@@ -12,7 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
+
+    public interface OnEntryLongClickListener {
+        void onEntryLongClick(LeaderboardEntry entry);
+    }
+
     private final List<LeaderboardEntry> entries = new ArrayList<>();
+    private OnEntryLongClickListener longClickListener;
+    private String currentUserId;
 
     public void setEntries(List<LeaderboardEntry> newEntries) {
         entries.clear();
@@ -20,6 +27,14 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             entries.addAll(newEntries);
         }
         notifyDataSetChanged();
+    }
+
+    public void setOnEntryLongClickListener(OnEntryLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
+    public void setCurrentUserId(String currentUserId) {
+        this.currentUserId = currentUserId;
     }
 
     @NonNull
@@ -46,6 +61,17 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
             dateText = format.format(entry.getCreatedAt().toDate());
         }
         holder.tvDate.setText(dateText);
+
+        if (currentUserId != null && currentUserId.equals(entry.getUid())) {
+            holder.itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    longClickListener.onEntryLongClick(entry);
+                }
+                return true;
+            });
+        } else {
+            holder.itemView.setOnLongClickListener(null);
+        }
     }
 
     @Override
@@ -68,4 +94,3 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         }
     }
 }
-
