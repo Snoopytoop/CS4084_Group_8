@@ -14,6 +14,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CS4084_Group_8">
         <activity
+            android:name=".AdminDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
+            android:name=".AdminLoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
             android:name=".FindBelayerActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
