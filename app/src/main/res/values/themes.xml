@@ -6,4 +6,9 @@
     </style>
 
     <style name="Theme.CS4084_Group_8" parent="Base.Theme.CS4084_Group_8" />
+
+    <style name="ShapeAppearance.CS4084.Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>

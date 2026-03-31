@@ -14,31 +14,23 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CS4084_Group_8">
         <activity
-            android:name=".AdminDashboardActivity"
+            android:name=".CreatePostActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
         <activity
-            android:name=".AdminLoginActivity"
+            android:name=".UserProfileActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
         <activity
-            android:name=".FindBelayerActivity"
-            android:exported="false"
-            android:theme="@style/Theme.CS4084_Group_8" />
-        <activity
-            android:name=".RouteLogActivity"
-            android:exported="false"
-            android:theme="@style/Theme.CS4084_Group_8" />
-        <activity
-            android:name=".RootDashboardActivity"
-            android:exported="false"
-            android:theme="@style/Theme.CS4084_Group_8" />
-        <activity
-            android:name=".RootLoginActivity"
+            android:name=".ProfileSetupActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
         <activity
             android:name=".HomeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CS4084_Group_8" />
+        <activity
+            android:name=".LeaderboardActivity"
             android:exported="false"
             android:theme="@style/Theme.CS4084_Group_8" />
         <activity

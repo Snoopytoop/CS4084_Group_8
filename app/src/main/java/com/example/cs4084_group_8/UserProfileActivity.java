@@ -1,8 +1,8 @@
 package com.example.cs4084_group_8;
 
 import android.content.Intent;
-import android.text.InputType;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,39 +32,56 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.DocumentReference;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class HomeActivity extends AppCompatActivity {
+public class UserProfileActivity extends AppCompatActivity {
+    private static final int MENU_EDIT_PROFILE_ID = 1001;
+    private static final int MENU_LOGOUT_ID = 1002;
     private static final String PROFILE_CACHE_PREF = "profile_cache";
     private static final String PROFILE_IMAGE_URL_PREFIX = "profile_image_url_";
 
-    private ShapeableImageView ivNavProfile;
+    private ImageView ivProfile;
+    private TextView tvUsername;
+    private TextView tvEmail;
+    private TextView tvBio;
+    private ImageButton btnSettings;
+    private ImageButton btnCreatePostTop;
+    private ImageButton btnNavHome;
     private ImageButton btnNavCreatePost;
-    private RecyclerView rvPosts;
-    private TextView tvEmptyFeed;
+    private ImageButton btnNavLeaderboard;
+    private ShapeableImageView ivNavProfile;
+    private RecyclerView rvMyPosts;
+    private TextView tvEmptyMyPosts;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
     private PostAdapter postAdapter;
-    private ListenerRegistration postsListener;
+    private ListenerRegistration myPostsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_home);
+        setContentView(R.layout.activity_user_profile);
 
-        ImageButton btnNavHome = findViewById(R.id.btnNavHome);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
-        ivNavProfile = findViewById(R.id.ivNavProfile);
+        ivProfile = findViewById(R.id.ivProfile);
+        tvUsername = findViewById(R.id.tvUsername);
+        tvEmail = findViewById(R.id.tvEmail);
+        tvBio = findViewById(R.id.tvBio);
+        btnSettings = findViewById(R.id.btnSettings);
+        btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
+        btnNavHome = findViewById(R.id.btnNavHome);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
-        rvPosts = findViewById(R.id.rvPosts);
-        tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
+        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ivNavProfile = findViewById(R.id.ivNavProfile);
+        rvMyPosts = findViewById(R.id.rvMyPosts);
+        tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
-
         postAdapter = new PostAdapter(
                 currentUser != null ? currentUser.getUid() : "",
                 new PostAdapter.PostActionListener() {
@@ -78,23 +96,26 @@ public class HomeActivity extends AppCompatActivity {
                     }
                 }
         );
-        rvPosts.setLayoutManager(new LinearLayoutManager(this));
-        rvPosts.setAdapter(postAdapter);
+        rvMyPosts.setLayoutManager(new LinearLayoutManager(this));
+        rvMyPosts.setAdapter(postAdapter);
 
+        btnSettings.setOnClickListener(v -> showSettingsMenu());
+        btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
         btnNavHome.setOnClickListener(v -> {
-            // Already on home.
+            startActivity(new Intent(this, HomeActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+        btnNavCreatePost.setOnClickListener(v -> {
+            startActivity(new Intent(this, CreatePostActivity.class));
+            overridePendingTransition(0, 0);
         });
         btnNavLeaderboard.setOnClickListener(v -> {
             startActivity(new Intent(this, LeaderboardActivity.class));
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        btnNavCreatePost.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreatePostActivity.class));
-            overridePendingTransition(0, 0);
+            // Already on profile.
         });
 
         // Adjust nav bar position for gesture/button navigation
@@ -111,33 +132,78 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        currentUser = user;
-        if (user != null) {
-            loadNavProfileImage(user.getUid(), ivNavProfile);
-            listenForPosts();
-        } else {
-            ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
-            tvEmptyFeed.setText("Please log in to view and create posts.");
-            tvEmptyFeed.setVisibility(View.VISIBLE);
-        }
+        loadUserProfile();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (postsListener != null) {
-            postsListener.remove();
-            postsListener = null;
+        if (myPostsListener != null) {
+            myPostsListener.remove();
+            myPostsListener = null;
         }
     }
 
-    private void listenForPosts() {
-        if (postsListener != null) {
-            postsListener.remove();
+    private void loadUserProfile() {
+        String userIdFromIntent = getIntent().getStringExtra("USER_ID");
+        FirebaseUser loggedInUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        // Decide whose profile to load
+        String targetUserId;
+        if (!TextUtils.isEmpty(userIdFromIntent)) {
+            targetUserId = userIdFromIntent; // viewing another user
+        } else if (loggedInUser != null) {
+            targetUserId = loggedInUser.getUid(); // viewing own profile
+        } else {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
         }
-        postsListener = firestore.collection("posts")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
+
+        // If viewing own profile → show email, else hide it
+        if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
+            // Viewing your own profile
+            tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
+            tvEmail.setVisibility(View.VISIBLE);
+            btnSettings.setVisibility(View.VISIBLE); // show settings
+        } else {
+            // Viewing someone else's profile
+            tvEmail.setVisibility(View.GONE);
+            btnSettings.setVisibility(View.GONE); // hide settings
+        }
+
+        // Load user data from Firestore
+        firestore.collection("users")
+                .document(targetUserId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String username = snapshot.getString("username");
+                    String bio = snapshot.getString("bio");
+                    String imageUrl = snapshot.getString("profileImageUrl");
+
+                    tvUsername.setText(TextUtils.isEmpty(username) ? "No username yet" : username);
+                    tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
+
+                    if (!TextUtils.isEmpty(imageUrl)) {
+                        loadProfileImages(imageUrl);
+                    } else {
+                        ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
+                        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+                    }
+
+                    // Load THAT user's posts
+                    listenForMyPosts(targetUserId);
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void listenForMyPosts(String uid) {
+        if (myPostsListener != null) {
+            myPostsListener.remove();
+        }
+        myPostsListener = firestore.collection("posts")
+                .whereEqualTo("authorUid", uid)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
                         Toast.makeText(this, "Failed to load posts: " + error.getMessage(), Toast.LENGTH_LONG).show();
@@ -153,8 +219,10 @@ public class HomeActivity extends AppCompatActivity {
                             }
                         });
                     }
+                    Collections.sort(posts, Comparator.comparing(Post::getCreatedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())).reversed());
                     postAdapter.submitList(posts);
-                    tvEmptyFeed.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
+                    tvEmptyMyPosts.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
@@ -190,7 +258,7 @@ public class HomeActivity extends AppCompatActivity {
             return;
         }
         LayoutInflater inflater = LayoutInflater.from(this);
-        android.view.View dialogView = inflater.inflate(R.layout.dialog_add_comment, null);
+        View dialogView = inflater.inflate(R.layout.dialog_add_comment, null);
         TextView tvExistingComments = dialogView.findViewById(R.id.tvExistingComments);
         EditText etComment = dialogView.findViewById(R.id.etComment);
         etComment.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -264,37 +332,47 @@ public class HomeActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void loadNavProfileImage(String uid, ImageView targetView) {
-        String cachedUrl = getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
-                .getString(PROFILE_IMAGE_URL_PREFIX + uid, null);
-        if (!TextUtils.isEmpty(cachedUrl)) {
-            renderProfileImage(cachedUrl, targetView);
+    private void loadProfileImages(String imageUrl) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
+                    .edit()
+                    .putString(PROFILE_IMAGE_URL_PREFIX + user.getUid(), imageUrl)
+                    .apply();
         }
 
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(uid)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    String imageUrl = snapshot.getString("profileImageUrl");
-                    if (TextUtils.isEmpty(imageUrl)) {
-                        targetView.setImageResource(android.R.drawable.ic_menu_camera);
-                        return;
-                    }
-                    getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
-                            .edit()
-                            .putString(PROFILE_IMAGE_URL_PREFIX + uid, imageUrl)
-                            .apply();
-                    renderProfileImage(imageUrl, targetView);
-                })
-                .addOnFailureListener(e -> targetView.setImageResource(android.R.drawable.ic_menu_camera));
-    }
-
-    private void renderProfileImage(String imageUrl, ImageView targetView) {
         Glide.with(this)
                 .load(imageUrl)
                 .placeholder(android.R.drawable.ic_menu_camera)
                 .error(android.R.drawable.ic_menu_camera)
-                .into(targetView);
+                .into(ivProfile);
+
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(android.R.drawable.ic_menu_camera)
+                .error(android.R.drawable.ic_menu_camera)
+                .into(ivNavProfile);
+    }
+
+    private void showSettingsMenu() {
+        PopupMenu popupMenu = new PopupMenu(this, btnSettings);
+        popupMenu.getMenu().add(0, MENU_EDIT_PROFILE_ID, 0, "Edit profile");
+        popupMenu.getMenu().add(0, MENU_LOGOUT_ID, 1, "Logout");
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == MENU_EDIT_PROFILE_ID) {
+                Intent intent = new Intent(this, ProfileSetupActivity.class);
+                intent.putExtra("fromProfile", true);
+                startActivity(intent);
+                return true;
+            }
+            if (item.getItemId() == MENU_LOGOUT_ID) {
+                FirebaseAuth.getInstance().signOut();
+                startActivity(new Intent(this, MainActivity.class));
+                finish();
+                return true;
+            }
+            return false;
+        });
+        popupMenu.show();
     }
 }

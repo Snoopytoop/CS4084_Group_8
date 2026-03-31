@@ -26,7 +26,6 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityAuth";
-    private static final String USERS_COLLECTION = "users";
     private TextInputLayout tilEmail;
     private TextInputLayout tilUsername;
     private TextInputLayout tilPassword;
@@ -34,13 +33,11 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText etUsername;
     private TextInputEditText etPassword;
     private MaterialButton btnRegister;
-    private MaterialButton btnRootLogin;
     private TextView tvTitle;
     private TextView tvSwitchMode;
 
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
-    private boolean firebaseEnabled;
     private boolean isRegisterMode = true;
 
     @Override
@@ -49,19 +46,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         bindViews();
-        firebaseEnabled = !FirebaseApp.getApps(this).isEmpty();
-        if (firebaseEnabled) {
-            firebaseAuth = FirebaseAuth.getInstance();
-            firebaseFirestore = FirebaseFirestore.getInstance();
-            Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
-        } else {
-            Log.w(TAG, "Firebase is not configured for this build.");
-            setUserAuthEnabled(false);
-            Toast.makeText(this, R.string.member_auth_unavailable_toast, Toast.LENGTH_LONG).show();
-        }
+        firebaseAuth = FirebaseAuth.getInstance();
+        firebaseFirestore = FirebaseFirestore.getInstance();
+        Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
-        btnRootLogin.setOnClickListener(v -> startActivity(new Intent(this, AdminLoginActivity.class)));
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -74,13 +63,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (!firebaseEnabled) {
-            return;
-        }
-
-        FirebaseUser user = firebaseAuth.getCurrentUser();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
-            handleExistingSignedInUser(user);
+            String email = user.getEmail() != null ? user.getEmail() : "";
+            upsertUserProfileAndRoute(user, email, false);
         }
     }
 
@@ -92,20 +78,11 @@ public class MainActivity extends AppCompatActivity {
         etUsername = findViewById(R.id.etUsername);
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
-        btnRootLogin = findViewById(R.id.btnRootLogin);
         tvTitle = findViewById(R.id.tvTitle);
         tvSwitchMode = findViewById(R.id.tvSwitchMode);
     }
 
     private void updateAuthModeUi() {
-        if (!firebaseEnabled) {
-            tvTitle.setText(R.string.member_auth_unavailable_title);
-            btnRegister.setText(R.string.member_auth_unavailable_button);
-            tvSwitchMode.setText(R.string.member_auth_unavailable_message);
-            tilUsername.setVisibility(View.GONE);
-            return;
-        }
-
         if (isRegisterMode) {
             tvTitle.setText("Create Account");
             btnRegister.setText("Register");
@@ -120,11 +97,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleAuthAction() {
-        if (!firebaseEnabled) {
-            Toast.makeText(this, R.string.member_auth_unavailable_toast, Toast.LENGTH_LONG).show();
-            return;
-        }
-
         clearInputErrors();
 
         String email = valueOf(etEmail);
@@ -182,18 +154,18 @@ public class MainActivity extends AppCompatActivity {
                                 userProfile.put("uid", currentUser.getUid());
                                 userProfile.put("email", email);
                                 userProfile.put("username", username);
-                                userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
+                                userProfile.put("profileCompleted", false);
                                 userProfile.put("createdAt", FieldValue.serverTimestamp());
                                 userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
-                                firebaseFirestore.collection(USERS_COLLECTION)
+                                firebaseFirestore.collection("users")
                                         .document(currentUser.getUid())
                                         .set(userProfile, SetOptions.merge())
                                         .addOnSuccessListener(unused -> {
                                             Log.d(TAG, "Profile write success for uid=" + currentUser.getUid());
                                             setLoading(false);
                                             Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
-                                            navigateToHome();
+                                            navigateToProfileSetup();
                                         })
                                         .addOnFailureListener(e -> {
                                             Log.e(TAG, "Profile write failed on register uid=" + currentUser.getUid(), e);
@@ -215,113 +187,60 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
 
-                        validateAndNavigateMemberLogin(currentUser, email);
+                        upsertUserProfileAndRoute(currentUser, email, true);
                     } else {
                         Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void validateAndNavigateMemberLogin(FirebaseUser currentUser, String email) {
-        firebaseFirestore.collection(USERS_COLLECTION)
-                .document(currentUser.getUid())
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
-                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
-                        setLoading(false);
-                        firebaseAuth.signOut();
-                        Toast.makeText(this, R.string.admin_use_admin_login_toast, Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    syncMemberProfileAndNavigate(currentUser, email, true, true);
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Toast.makeText(this, "Unable to verify account role: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
-    }
-
-    private void handleExistingSignedInUser(FirebaseUser currentUser) {
-        String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
-        firebaseFirestore.collection(USERS_COLLECTION)
-                .document(currentUser.getUid())
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
-                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
-                        navigateToAdminDashboard();
-                        return;
-                    }
-                    syncMemberProfileAndNavigate(currentUser, email, false, false);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Role lookup failed for uid=" + currentUser.getUid(), e);
-                });
-    }
-
-    private void syncMemberProfileAndNavigate(
-            FirebaseUser currentUser,
-            String email,
-            boolean showSuccessToast,
-            boolean shouldClearLoading
-    ) {
-        String fallbackUsername = buildFallbackUsername(currentUser, email);
-
-        Map<String, Object> userProfile = new HashMap<>();
-        userProfile.put("uid", currentUser.getUid());
-        userProfile.put("email", email);
-        userProfile.put("username", fallbackUsername);
-        userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
-        userProfile.put("updatedAt", FieldValue.serverTimestamp());
-
-        firebaseFirestore.collection(USERS_COLLECTION)
-                .document(currentUser.getUid())
-                .set(userProfile, SetOptions.merge())
-                .addOnSuccessListener(unused -> {
-                    Log.d(TAG, "Member profile sync success uid=" + currentUser.getUid());
-                    if (shouldClearLoading) {
-                        setLoading(false);
-                    }
-                    if (showSuccessToast) {
-                        Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
-                    }
-                    navigateToHome();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Member profile sync failed uid=" + currentUser.getUid(), e);
-                    if (shouldClearLoading) {
-                        setLoading(false);
-                    }
-                    Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    navigateToHome();
-                });
-    }
-
-    private String buildFallbackUsername(FirebaseUser currentUser, String email) {
+    private void upsertUserProfileAndRoute(FirebaseUser currentUser, String email, boolean showLoginToast) {
         String fallbackUsername = currentUser.getDisplayName();
         if (TextUtils.isEmpty(fallbackUsername)) {
             int atIndex = email.indexOf("@");
             fallbackUsername = atIndex > 0 ? email.substring(0, atIndex) : "climber";
         }
-        return fallbackUsername;
+
+        Map<String, Object> userProfile = new HashMap<>();
+        userProfile.put("uid", currentUser.getUid());
+        userProfile.put("email", email);
+        userProfile.put("username", fallbackUsername);
+        userProfile.put("updatedAt", FieldValue.serverTimestamp());
+
+        firebaseFirestore.collection("users")
+                .document(currentUser.getUid())
+                .set(userProfile, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    firebaseFirestore.collection("users")
+                            .document(currentUser.getUid())
+                            .get()
+                            .addOnSuccessListener(snapshot -> {
+                                Boolean profileCompleted = snapshot.getBoolean("profileCompleted");
+                                if (showLoginToast) {
+                                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                                }
+
+                                if (Boolean.TRUE.equals(profileCompleted)) {
+                                    navigateToHome();
+                                } else {
+                                    navigateToProfileSetup();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Profile read failed uid=" + currentUser.getUid(), e);
+                                navigateToProfileSetup();
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
+                    Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    navigateToProfileSetup();
+                });
     }
 
     private void setLoading(boolean isLoading) {
-        btnRegister.setEnabled(!isLoading && firebaseEnabled);
-        btnRootLogin.setEnabled(!isLoading);
-        tvSwitchMode.setEnabled(!isLoading && firebaseEnabled);
-    }
-
-    private void setUserAuthEnabled(boolean isEnabled) {
-        tilEmail.setEnabled(isEnabled);
-        tilUsername.setEnabled(isEnabled);
-        tilPassword.setEnabled(isEnabled);
-        etEmail.setEnabled(isEnabled);
-        etUsername.setEnabled(isEnabled);
-        etPassword.setEnabled(isEnabled);
-        btnRegister.setEnabled(isEnabled);
-        tvSwitchMode.setEnabled(isEnabled);
+        btnRegister.setEnabled(!isLoading);
+        tvSwitchMode.setEnabled(!isLoading);
     }
 
     private void clearInputErrors() {
@@ -349,8 +268,8 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private void navigateToAdminDashboard() {
-        startActivity(new Intent(this, AdminDashboardActivity.class));
+    private void navigateToProfileSetup() {
+        startActivity(new Intent(this, ProfileSetupActivity.class));
         finish();
     }
 }
