@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -41,6 +42,8 @@ public class HomeActivity extends AppCompatActivity {
 
     private ShapeableImageView ivNavProfile;
     private ImageButton btnNavCreatePost;
+    private MaterialButton btnQuickRouteLog;
+    private MaterialButton btnQuickFindBelayer;
     private RecyclerView rvPosts;
     private TextView tvEmptyFeed;
 
@@ -58,6 +61,8 @@ public class HomeActivity extends AppCompatActivity {
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
+        btnQuickRouteLog = findViewById(R.id.btnQuickRouteLog);
+        btnQuickFindBelayer = findViewById(R.id.btnQuickFindBelayer);
         rvPosts = findViewById(R.id.rvPosts);
         tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
 
@@ -96,6 +101,8 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(new Intent(this, CreatePostActivity.class));
             overridePendingTransition(0, 0);
         });
+        btnQuickRouteLog.setOnClickListener(v -> startActivity(new Intent(this, RouteLogActivity.class)));
+        btnQuickFindBelayer.setOnClickListener(v -> startActivity(new Intent(this, FindBelayerActivity.class)));
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);

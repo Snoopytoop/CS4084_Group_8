@@ -95,6 +95,14 @@
             android:textSize="13sp" />
 
         <TextView
+            android:id="@+id/tvBelayerContactHandle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/route_log_text_secondary"
+            android:textSize="13sp" />
+
+        <TextView
             android:id="@+id/tvBelayerNotes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -102,13 +110,30 @@
             android:textColor="@color/route_log_text_secondary"
             android:textSize="13sp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnMessageBelayer"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/find_belayer_message_button" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopyBelayerContact"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="@string/find_belayer_copy_contact_button" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteBelayerPost"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="@string/find_belayer_delete_button" />
+        </LinearLayout>
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
