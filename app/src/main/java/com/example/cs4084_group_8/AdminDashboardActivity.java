@@ -10,23 +10,26 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 public class AdminDashboardActivity extends AppCompatActivity {
-    private static final String USERS_COLLECTION = "users";
-
     private TextView tvAdminIdentity;
     private TextView tvAdminRole;
-    private MaterialButton btnAdminManageUsers;
-    private MaterialButton btnAdminModeration;
+    private TextView tvUsersCount;
+    private TextView tvPostsCount;
+    private TextView tvRouteLogsCount;
+    private TextView tvBelayerPostsCount;
     private MaterialButton btnAdminSignOut;
 
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
-    private boolean firebaseEnabled;
+    private ListenerRegistration usersCountListener;
+    private ListenerRegistration postsCountListener;
+    private ListenerRegistration routeLogsCountListener;
+    private ListenerRegistration belayerPostsCountListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,31 +39,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
         bindViews();
         configureToolbar();
 
-        firebaseEnabled = !FirebaseApp.getApps(this).isEmpty();
-        if (firebaseEnabled) {
-            firebaseAuth = FirebaseAuth.getInstance();
-            firebaseFirestore = FirebaseFirestore.getInstance();
-        } else {
-            Toast.makeText(this, R.string.admin_dashboard_requires_firebase, Toast.LENGTH_LONG).show();
-            returnToSignIn();
-            return;
-        }
-
-        btnAdminManageUsers.setOnClickListener(view ->
-                Toast.makeText(this, R.string.admin_dashboard_user_mgmt_stub, Toast.LENGTH_SHORT).show()
-        );
-        btnAdminModeration.setOnClickListener(view ->
-                Toast.makeText(this, R.string.admin_dashboard_moderation_stub, Toast.LENGTH_SHORT).show()
-        );
+        firebaseAuth = FirebaseAuth.getInstance();
+        firebaseFirestore = FirebaseFirestore.getInstance();
         btnAdminSignOut.setOnClickListener(view -> signOut());
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (!firebaseEnabled) {
-            return;
-        }
 
         FirebaseUser currentUser = firebaseAuth.getCurrentUser();
         if (currentUser == null) {
@@ -71,22 +57,29 @@ public class AdminDashboardActivity extends AppCompatActivity {
         verifyAdminRole(currentUser);
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        releaseListeners();
+    }
+
     private void bindViews() {
         tvAdminIdentity = findViewById(R.id.tvAdminIdentity);
         tvAdminRole = findViewById(R.id.tvAdminRole);
-        btnAdminManageUsers = findViewById(R.id.btnAdminManageUsers);
-        btnAdminModeration = findViewById(R.id.btnAdminModeration);
+        tvUsersCount = findViewById(R.id.tvUsersCount);
+        tvPostsCount = findViewById(R.id.tvPostsCount);
+        tvRouteLogsCount = findViewById(R.id.tvRouteLogsCount);
+        tvBelayerPostsCount = findViewById(R.id.tvBelayerPostsCount);
         btnAdminSignOut = findViewById(R.id.btnAdminSignOut);
     }
 
     private void configureToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbarAdminDashboard);
-        toolbar.setNavigationIcon(R.drawable.ic_route_back);
         toolbar.setNavigationOnClickListener(view -> finish());
     }
 
     private void verifyAdminRole(FirebaseUser currentUser) {
-        firebaseFirestore.collection(USERS_COLLECTION)
+        firebaseFirestore.collection(FirestoreCollections.USERS)
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {
@@ -105,12 +98,53 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
                     tvAdminIdentity.setText(getString(R.string.admin_dashboard_identity_format, email));
                     tvAdminRole.setText(getString(R.string.admin_dashboard_role_format, AuthRoles.ADMIN));
+                    bindCollectionCounts();
                 })
                 .addOnFailureListener(e -> {
                     firebaseAuth.signOut();
                     Toast.makeText(this, getString(R.string.admin_dashboard_role_verify_error, e.getMessage()), Toast.LENGTH_LONG).show();
                     returnToSignIn();
                 });
+    }
+
+    private void bindCollectionCounts() {
+        releaseListeners();
+        usersCountListener = bindCount(FirestoreCollections.USERS, tvUsersCount);
+        postsCountListener = bindCount(FirestoreCollections.POSTS, tvPostsCount);
+        routeLogsCountListener = bindCount(FirestoreCollections.ROUTE_LOGS, tvRouteLogsCount);
+        belayerPostsCountListener = bindCount(FirestoreCollections.BELAYER_POSTS, tvBelayerPostsCount);
+    }
+
+    private ListenerRegistration bindCount(String collectionName, TextView targetView) {
+        return firebaseFirestore.collection(collectionName)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        targetView.setText(getString(R.string.admin_dashboard_stat_unavailable));
+                        return;
+                    }
+
+                    int count = value != null ? value.size() : 0;
+                    targetView.setText(String.valueOf(count));
+                });
+    }
+
+    private void releaseListeners() {
+        if (usersCountListener != null) {
+            usersCountListener.remove();
+            usersCountListener = null;
+        }
+        if (postsCountListener != null) {
+            postsCountListener.remove();
+            postsCountListener = null;
+        }
+        if (routeLogsCountListener != null) {
+            routeLogsCountListener.remove();
+            routeLogsCountListener = null;
+        }
+        if (belayerPostsCountListener != null) {
+            belayerPostsCountListener.remove();
+            belayerPostsCountListener = null;
+        }
     }
 
     private void signOut() {
