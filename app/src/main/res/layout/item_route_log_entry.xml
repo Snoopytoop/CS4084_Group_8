@@ -94,6 +94,14 @@
             android:layout_marginTop="8dp"
             android:textColor="@color/route_log_text_secondary"
             android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteRouteEntry"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/route_log_delete_button" />
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

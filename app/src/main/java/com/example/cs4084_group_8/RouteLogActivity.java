@@ -1,13 +1,14 @@
 package com.example.cs4084_group_8;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,9 +17,18 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class RouteLogActivity extends AppCompatActivity {
     private TextInputLayout tilRouteName;
@@ -40,22 +50,52 @@ public class RouteLogActivity extends AppCompatActivity {
     private TextView tvRouteHistoryEmpty;
     private RecyclerView rvRouteHistory;
 
-    private RouteLogStore routeLogStore;
+    private FirebaseFirestore firestore;
+    private FirebaseUser currentUser;
     private RouteLogAdapter routeLogAdapter;
+    private ListenerRegistration routeHistoryListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_route_log);
 
+        firestore = FirebaseFirestore.getInstance();
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
+        }
+
         bindViews();
         configureToolbar();
         configureSendStatusDropdown();
         configureRouteHistoryList();
 
-        routeLogStore = new RouteLogStore(this);
         btnSaveRouteEntry.setOnClickListener(view -> saveRouteEntry());
-        loadRouteHistory();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
+        }
+
+        listenForRouteHistory();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (routeHistoryListener != null) {
+            routeHistoryListener.remove();
+            routeHistoryListener = null;
+        }
     }
 
     private void bindViews() {
@@ -97,7 +137,7 @@ public class RouteLogActivity extends AppCompatActivity {
 
     private void configureRouteHistoryList() {
         rvRouteHistory.setLayoutManager(new LinearLayoutManager(this));
-        routeLogAdapter = new RouteLogAdapter(getLayoutInflater());
+        routeLogAdapter = new RouteLogAdapter(getLayoutInflater(), this::confirmDeleteEntry);
         rvRouteHistory.setAdapter(routeLogAdapter);
     }
 
@@ -121,10 +161,10 @@ public class RouteLogActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        int attempts = 0;
+        long attempts = 0;
         if (!hasError) {
             try {
-                attempts = Integer.parseInt(attemptsRaw);
+                attempts = Long.parseLong(attemptsRaw);
             } catch (NumberFormatException ignored) {
                 attempts = 0;
             }
@@ -145,19 +185,139 @@ public class RouteLogActivity extends AppCompatActivity {
             sendStatus = getString(R.string.route_log_default_status);
         }
 
-        RouteLogEntry entry = new RouteLogEntry(
-                routeName,
-                grade,
-                attempts,
-                sendStatus,
-                notes,
-                System.currentTimeMillis()
-        );
-        routeLogStore.addEntry(entry);
+        btnSaveRouteEntry.setEnabled(false);
+        String finalGrade = grade;
+        String finalSendStatus = sendStatus;
+        long finalAttempts = attempts;
+        firestore.collection(FirestoreCollections.USERS)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String authorName = snapshot.getString("username");
+                    if (TextUtils.isEmpty(authorName)) {
+                        authorName = currentUser.getDisplayName();
+                    }
+                    if (TextUtils.isEmpty(authorName)) {
+                        authorName = getString(R.string.route_log_default_author_name);
+                    }
 
-        clearQuickEntryFields();
-        loadRouteHistory();
-        Toast.makeText(this, R.string.route_log_saved_toast, Toast.LENGTH_SHORT).show();
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("authorUid", currentUser.getUid());
+                    data.put("authorName", authorName);
+                    data.put("routeName", routeName);
+                    data.put("grade", finalGrade);
+                    data.put("attempts", finalAttempts);
+                    data.put("sendStatus", finalSendStatus);
+                    data.put("notes", notes);
+                    data.put("loggedAt", FieldValue.serverTimestamp());
+
+                    firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                            .add(data)
+                            .addOnSuccessListener(documentReference -> {
+                                btnSaveRouteEntry.setEnabled(true);
+                                clearQuickEntryFields();
+                                Toast.makeText(this, R.string.route_log_saved_toast, Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e -> {
+                                btnSaveRouteEntry.setEnabled(true);
+                                Toast.makeText(this, getString(R.string.route_log_save_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    btnSaveRouteEntry.setEnabled(true);
+                    Toast.makeText(this, getString(R.string.route_log_profile_load_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void listenForRouteHistory() {
+        if (routeHistoryListener != null) {
+            routeHistoryListener.remove();
+        }
+
+        tvRouteHistoryEmpty.setVisibility(TextView.VISIBLE);
+        tvRouteHistoryEmpty.setText(R.string.route_log_loading_history);
+        rvRouteHistory.setVisibility(RecyclerView.GONE);
+
+        routeHistoryListener = firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                .whereEqualTo("authorUid", currentUser.getUid())
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        rvRouteHistory.setVisibility(RecyclerView.GONE);
+                        tvRouteHistoryEmpty.setVisibility(TextView.VISIBLE);
+                        tvRouteHistoryEmpty.setText(getString(R.string.route_log_load_failed, error.getMessage()));
+                        return;
+                    }
+
+                    List<RouteLogEntry> entries = new ArrayList<>();
+                    if (value != null) {
+                        value.getDocuments().forEach(documentSnapshot -> {
+                            RouteLogEntry entry = documentSnapshot.toObject(RouteLogEntry.class);
+                            if (entry != null) {
+                                entry.setId(documentSnapshot.getId());
+                                entries.add(entry);
+                            }
+                        });
+                    }
+
+                    entries.sort(Comparator.comparing(
+                            RouteLogEntry::getLoggedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())
+                    ).reversed());
+
+                    routeLogAdapter.submitEntries(entries);
+                    updateSummary(entries);
+
+                    boolean hasEntries = !entries.isEmpty();
+                    rvRouteHistory.setVisibility(hasEntries ? RecyclerView.VISIBLE : RecyclerView.GONE);
+                    tvRouteHistoryEmpty.setVisibility(hasEntries ? TextView.GONE : TextView.VISIBLE);
+                    if (!hasEntries) {
+                        tvRouteHistoryEmpty.setText(R.string.route_log_empty_history);
+                    }
+                });
+    }
+
+    private void updateSummary(List<RouteLogEntry> entries) {
+        long totalAttempts = 0;
+        for (RouteLogEntry entry : entries) {
+            totalAttempts += entry.getAttempts();
+        }
+
+        tvTotalRoutesValue.setText(getString(R.string.route_log_total_routes_value, entries.size()));
+        tvTotalAttemptsValue.setText(getString(R.string.route_log_total_attempts_value, totalAttempts));
+
+        float averageAttempts = entries.isEmpty() ? 0f : (float) totalAttempts / entries.size();
+        String averageText = String.format(Locale.getDefault(), "%.1f", averageAttempts);
+        tvAverageAttemptsValue.setText(getString(R.string.route_log_avg_attempts_value, averageText));
+    }
+
+    private void confirmDeleteEntry(RouteLogEntry entry) {
+        if (TextUtils.isEmpty(entry.getId())) {
+            Toast.makeText(this, R.string.route_log_delete_missing_id, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentUser == null || !TextUtils.equals(currentUser.getUid(), entry.getAuthorUid())) {
+            Toast.makeText(this, R.string.route_log_delete_not_owner, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.route_log_delete_title)
+                .setMessage(R.string.route_log_delete_message)
+                .setPositiveButton(R.string.route_log_delete_confirm, (dialog, which) -> deleteEntry(entry.getId()))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void deleteEntry(String entryId) {
+        firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                .document(entryId)
+                .delete()
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(this, R.string.route_log_delete_success, Toast.LENGTH_SHORT).show()
+                )
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, getString(R.string.route_log_delete_failed, e.getMessage()), Toast.LENGTH_LONG).show()
+                );
     }
 
     private void clearInputErrors() {
@@ -174,30 +334,6 @@ public class RouteLogActivity extends AppCompatActivity {
         etRouteAttempts.setText("");
         etRouteNotes.setText("");
         actvRouteStatus.setText(getString(R.string.route_log_default_status), false);
-    }
-
-    private void loadRouteHistory() {
-        List<RouteLogEntry> entries = routeLogStore.getAllEntries();
-        routeLogAdapter.submitEntries(entries);
-        updateSummary(entries);
-
-        boolean hasEntries = !entries.isEmpty();
-        rvRouteHistory.setVisibility(hasEntries ? View.VISIBLE : View.GONE);
-        tvRouteHistoryEmpty.setVisibility(hasEntries ? View.GONE : View.VISIBLE);
-    }
-
-    private void updateSummary(List<RouteLogEntry> entries) {
-        int totalAttempts = 0;
-        for (RouteLogEntry entry : entries) {
-            totalAttempts += entry.getAttempts();
-        }
-
-        tvTotalRoutesValue.setText(getString(R.string.route_log_total_routes_value, entries.size()));
-        tvTotalAttemptsValue.setText(getString(R.string.route_log_total_attempts_value, totalAttempts));
-
-        float averageAttempts = entries.isEmpty() ? 0f : (float) totalAttempts / entries.size();
-        String averageText = String.format(Locale.getDefault(), "%.1f", averageAttempts);
-        tvAverageAttemptsValue.setText(getString(R.string.route_log_avg_attempts_value, averageText));
     }
 
     private String valueOf(TextView view) {
