@@ -12,14 +12,11 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class AdminLoginActivity extends AppCompatActivity {
-    private static final String USERS_COLLECTION = "users";
-
     private TextInputLayout tilAdminEmail;
     private TextInputLayout tilAdminPassword;
     private TextInputEditText etAdminEmail;
@@ -28,7 +25,6 @@ public class AdminLoginActivity extends AppCompatActivity {
 
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
-    private boolean firebaseEnabled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,14 +34,8 @@ public class AdminLoginActivity extends AppCompatActivity {
         bindViews();
         configureToolbar();
 
-        firebaseEnabled = !FirebaseApp.getApps(this).isEmpty();
-        if (firebaseEnabled) {
-            firebaseAuth = FirebaseAuth.getInstance();
-            firebaseFirestore = FirebaseFirestore.getInstance();
-        } else {
-            setInputsEnabled(false);
-            Toast.makeText(this, R.string.admin_login_requires_firebase, Toast.LENGTH_LONG).show();
-        }
+        firebaseAuth = FirebaseAuth.getInstance();
+        firebaseFirestore = FirebaseFirestore.getInstance();
 
         btnAdminLogin.setOnClickListener(view -> attemptAdminLogin());
     }
@@ -60,17 +50,12 @@ public class AdminLoginActivity extends AppCompatActivity {
 
     private void configureToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbarAdminLogin);
-        toolbar.setNavigationIcon(R.drawable.ic_route_back);
         toolbar.setNavigationOnClickListener(view -> finish());
     }
 
     private void attemptAdminLogin() {
-        if (!firebaseEnabled) {
-            Toast.makeText(this, R.string.admin_login_requires_firebase, Toast.LENGTH_LONG).show();
-            return;
-        }
-
         clearInputErrors();
+
         String email = valueOf(etAdminEmail);
         String password = valueOf(etAdminPassword);
 
@@ -111,7 +96,7 @@ public class AdminLoginActivity extends AppCompatActivity {
     }
 
     private void verifyAdminRoleAndContinue(FirebaseUser currentUser) {
-        firebaseFirestore.collection(USERS_COLLECTION)
+        firebaseFirestore.collection(FirestoreCollections.USERS)
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {

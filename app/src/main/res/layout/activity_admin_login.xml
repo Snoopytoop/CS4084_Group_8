@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
         android:title="@string/admin_login_title"
+        app:navigationIcon="@android:drawable/ic_media_previous"
         app:subtitle="@string/admin_login_subtitle" />
 
     <androidx.core.widget.NestedScrollView
