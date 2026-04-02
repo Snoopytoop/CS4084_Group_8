@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 public class CreatePostActivity extends AppCompatActivity {
     private static final int BLOG_CHAR_THRESHOLD = 260;
+    private static final long MAX_POST_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final Pattern URL_PATTERN = Pattern.compile("(https?://\\S+)", Pattern.CASE_INSENSITIVE);
 
     private TextInputLayout tilPostContent;
@@ -52,6 +53,14 @@ public class CreatePostActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> imagePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
+                    String validationError = ImageValidation.validateImageSelection(this, uri, MAX_POST_IMAGE_BYTES);
+                    if (validationError != null) {
+                        selectedImageUri = null;
+                        ivSelectedPostImage.setVisibility(ImageView.GONE);
+                        btnPickPostImage.setText("Add Photo");
+                        Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     selectedImageUri = uri;
                     ivSelectedPostImage.setImageURI(uri);
                     ivSelectedPostImage.setVisibility(ImageView.VISIBLE);
@@ -140,6 +149,13 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void uploadSelectedImageAndCreatePost(String content) {
+        String validationError = ImageValidation.validateImageSelection(this, selectedImageUri, MAX_POST_IMAGE_BYTES);
+        if (validationError != null) {
+            setLoading(false);
+            Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         String filename = currentUser.getUid() + "_" + System.currentTimeMillis() + ".jpg";
         StorageReference imageRef = storage.getReference()
                 .child("post_images")
