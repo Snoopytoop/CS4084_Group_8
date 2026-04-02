@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function self(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function admin() {
+      return signedIn()
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function onlyFieldsChanged(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function postMetadataUnchanged() {
+      return request.resource.data.authorUid == resource.data.authorUid
+          && request.resource.data.authorName == resource.data.authorName
+          && request.resource.data.authorProfileImageUrl == resource.data.authorProfileImageUrl
+          && request.resource.data.postType == resource.data.postType
+          && request.resource.data.content == resource.data.content
+          && request.resource.data.mediaUrl == resource.data.mediaUrl
+          && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      allow create: if self(userId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.role == 'user';
+
+      allow update: if admin()
+          || (self(userId)
+              && request.resource.data.uid == resource.data.uid
+              && request.resource.data.role == resource.data.role);
+
+      allow delete: if admin();
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.likesCount == 0
+          && request.resource.data.commentsCount == 0
+          && request.resource.data.likedBy.size() == 0;
+
+      allow update: if admin()
+          || (signedIn()
+              && onlyFieldsChanged(['likedBy', 'likesCount', 'commentsCount'])
+              && postMetadataUnchanged());
+
+      allow delete: if admin() || resource.data.authorUid == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn()
+            && request.resource.data.authorUid == request.auth.uid;
+
+        allow update, delete: if admin() || resource.data.authorUid == request.auth.uid;
+      }
+    }
+
+    match /routeLogs/{routeLogId} {
+      allow read: if admin() || resource.data.authorUid == request.auth.uid;
+
+      allow create: if signedIn()
+          && request.resource.data.authorUid == request.auth.uid;
+
+      allow update, delete: if admin() || resource.data.authorUid == request.auth.uid;
+    }
+
+    match /belayerPosts/{belayerPostId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+          && request.resource.data.authorUid == request.auth.uid;
+
+      allow update, delete: if admin() || resource.data.authorUid == request.auth.uid;
+    }
+
+    match /leaderboard/{entryId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.seconds >= 0
+          && request.resource.data.milliseconds >= 0
+          && request.resource.data.milliseconds < 1000
+          && request.resource.data.totalMs >= 0;
+
+      allow update, delete: if admin() || resource.data.uid == request.auth.uid;
+    }
+  }
+}
