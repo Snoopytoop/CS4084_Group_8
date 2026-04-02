@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 public class LeaderboardActivity extends AppCompatActivity {
+    private static final long MAX_LEADERBOARD_SECONDS = 24L * 60L * 60L;
+
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
     private ListenerRegistration bestListener;
@@ -49,6 +51,7 @@ public class LeaderboardActivity extends AppCompatActivity {
     private EditText etSeconds;
     private EditText etMilliseconds;
     private Button btnSubmitTime;
+    private boolean isSubmittingTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -237,6 +240,10 @@ public class LeaderboardActivity extends AppCompatActivity {
     }
 
     private void submitNewTime() {
+        if (isSubmittingTime) {
+            return;
+        }
+
         if (currentUser == null) {
             Toast.makeText(this, "You must be logged in to submit times.", Toast.LENGTH_SHORT).show();
             return;
@@ -269,8 +276,19 @@ public class LeaderboardActivity extends AppCompatActivity {
             return;
         }
 
+        if (seconds > MAX_LEADERBOARD_SECONDS) {
+            etSeconds.setError("Seconds must be 86400 or less.");
+            return;
+        }
+
+        if (seconds > (Long.MAX_VALUE - milliseconds) / 1000L) {
+            Toast.makeText(this, "Time value is too large.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         long totalMs = seconds * 1000 + milliseconds;
 
+        setSubmitLoading(true);
         final String[] usernameHolder = {""};
         firestore.collection("users").document(currentUser.getUid()).get()
                 .addOnSuccessListener(userDoc -> {
@@ -292,13 +310,27 @@ public class LeaderboardActivity extends AppCompatActivity {
                     firestore.collection("leaderboard")
                             .add(data)
                             .addOnSuccessListener(documentReference -> {
+                                setSubmitLoading(false);
                                 Toast.makeText(this, "Time uploaded successfully.", Toast.LENGTH_SHORT).show();
                                 etSeconds.setText("");
                                 etMilliseconds.setText("");
                             })
-                            .addOnFailureListener(e -> Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                            .addOnFailureListener(e -> {
+                                setSubmitLoading(false);
+                                Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            });
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Unable to load user profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                .addOnFailureListener(e -> {
+                    setSubmitLoading(false);
+                    Toast.makeText(this, "Unable to load user profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void setSubmitLoading(boolean isLoading) {
+        isSubmittingTime = isLoading;
+        btnSubmitTime.setEnabled(!isLoading);
+        etSeconds.setEnabled(!isLoading);
+        etMilliseconds.setEnabled(!isLoading);
     }
 
     public void showDeleteDialog(LeaderboardEntry entry) {
