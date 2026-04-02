@@ -159,7 +159,6 @@ public class UserProfileActivity extends AppCompatActivity {
             finish();
             return;
         }
-
         // If viewing own profile → show email, else hide it
         if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
             // Viewing your own profile
@@ -185,7 +184,7 @@ public class UserProfileActivity extends AppCompatActivity {
                     tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
 
                     if (!TextUtils.isEmpty(imageUrl)) {
-                        loadProfileImages(imageUrl);
+                        loadProfileImages(imageUrl, targetUserId);
                     } else {
                         ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
                         ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
@@ -341,12 +340,11 @@ public class UserProfileActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void loadProfileImages(String imageUrl) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
+    private void loadProfileImages(String imageUrl, String profileUserId) {
+        if (!TextUtils.isEmpty(profileUserId)) {
             getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
                     .edit()
-                    .putString(PROFILE_IMAGE_URL_PREFIX + user.getUid(), imageUrl)
+                    .putString(PROFILE_IMAGE_URL_PREFIX + profileUserId, imageUrl)
                     .apply();
         }
 
