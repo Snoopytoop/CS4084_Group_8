@@ -234,6 +234,7 @@ public class HomeActivity extends AppCompatActivity {
                 .create();
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            android.widget.Button postButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             if (currentUser == null) {
                 dialog.dismiss();
                 return;
@@ -244,6 +245,7 @@ public class HomeActivity extends AppCompatActivity {
                 return;
             }
 
+            postButton.setEnabled(false);
             firestore.collection("users")
                     .document(currentUser.getUid())
                     .get()
@@ -265,7 +267,14 @@ public class HomeActivity extends AppCompatActivity {
                                     batch.update(postRef, "commentsCount", FieldValue.increment(1));
                                 })
                                 .addOnSuccessListener(unused -> dialog.dismiss())
-                                .addOnFailureListener(e -> Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                                .addOnFailureListener(e -> {
+                                    postButton.setEnabled(true);
+                                    Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                });
+                    })
+                    .addOnFailureListener(e -> {
+                        postButton.setEnabled(true);
+                        Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
         }));
         dialog.show();
