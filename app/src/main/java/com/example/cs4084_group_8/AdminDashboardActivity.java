@@ -41,6 +41,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
     private LayoutInflater layoutInflater;
+    private ListenerRegistration currentAdminRoleListener;
     private ListenerRegistration usersCountListener;
     private ListenerRegistration postsCountListener;
     private ListenerRegistration routeLogsCountListener;
@@ -49,6 +50,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private ListenerRegistration recentPostsListener;
     private ListenerRegistration recentRouteLogsListener;
     private ListenerRegistration recentBelayerPostsListener;
+    private boolean dashboardListenersBound;
     private final SimpleDateFormat activityTimestampFormat =
             new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
 
@@ -76,12 +78,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        verifyAdminRole(currentUser);
+        monitorAdminRole(currentUser);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        releaseRoleListener();
         releaseListeners();
     }
 
@@ -104,13 +107,28 @@ public class AdminDashboardActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(view -> finish());
     }
 
-    private void verifyAdminRole(FirebaseUser currentUser) {
-        firebaseFirestore.collection(FirestoreCollections.USERS)
+    private void monitorAdminRole(FirebaseUser currentUser) {
+        releaseRoleListener();
+        currentAdminRoleListener = firebaseFirestore.collection(FirestoreCollections.USERS)
                 .document(currentUser.getUid())
-                .get()
-                .addOnSuccessListener(snapshot -> {
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        firebaseAuth.signOut();
+                        Toast.makeText(this, getString(R.string.admin_dashboard_role_verify_error, error.getMessage()), Toast.LENGTH_LONG).show();
+                        returnToSignIn();
+                        return;
+                    }
+
+                    if (snapshot == null || !snapshot.exists()) {
+                        firebaseAuth.signOut();
+                        Toast.makeText(this, R.string.admin_dashboard_not_authorized, Toast.LENGTH_LONG).show();
+                        returnToSignIn();
+                        return;
+                    }
+
                     String role = snapshot.getString(AuthRoles.FIELD_ROLE);
                     if (!AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                        releaseListeners();
                         firebaseAuth.signOut();
                         Toast.makeText(this, R.string.admin_dashboard_not_authorized, Toast.LENGTH_LONG).show();
                         returnToSignIn();
@@ -124,12 +142,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
                     tvAdminIdentity.setText(getString(R.string.admin_dashboard_identity_format, email));
                     tvAdminRole.setText(getString(R.string.admin_dashboard_role_format, AuthRoles.ADMIN));
-                    bindCollectionCounts();
-                })
-                .addOnFailureListener(e -> {
-                    firebaseAuth.signOut();
-                    Toast.makeText(this, getString(R.string.admin_dashboard_role_verify_error, e.getMessage()), Toast.LENGTH_LONG).show();
-                    returnToSignIn();
+                    if (!dashboardListenersBound) {
+                        bindCollectionCounts();
+                    }
                 });
     }
 
@@ -143,6 +158,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         recentPostsListener = bindRecentPosts();
         recentRouteLogsListener = bindRecentRouteLogs();
         recentBelayerPostsListener = bindRecentBelayerPosts();
+        dashboardListenersBound = true;
     }
 
     private ListenerRegistration bindCount(String collectionName, TextView targetView) {
@@ -407,6 +423,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void releaseListeners() {
+        dashboardListenersBound = false;
         if (usersCountListener != null) {
             usersCountListener.remove();
             usersCountListener = null;
@@ -438,6 +455,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (recentBelayerPostsListener != null) {
             recentBelayerPostsListener.remove();
             recentBelayerPostsListener = null;
+        }
+    }
+
+    private void releaseRoleListener() {
+        if (currentAdminRoleListener != null) {
+            currentAdminRoleListener.remove();
+            currentAdminRoleListener = null;
         }
     }
 
