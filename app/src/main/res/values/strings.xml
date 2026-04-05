@@ -106,7 +106,7 @@
     <string name="route_log_delete_missing_id">Route entry is missing an id.</string>
     <string name="route_log_delete_not_owner">You can only delete your own route entries.</string>
     <string name="find_belayer_title">Find A Belayer</string>
-    <string name="find_belayer_subtitle">Post your wall, usual sessions, and contact details so other climbers can reach you.</string>
+    <string name="find_belayer_subtitle">Post your wall, usual sessions, and message other climbers directly when timing lines up.</string>
     <string name="find_belayer_total_posts_label">Posts</string>
     <string name="find_belayer_total_walls_label">Walls</string>
     <string name="find_belayer_total_posts_value">%1$d</string>
@@ -140,6 +140,8 @@
     <string name="find_belayer_contact_copied">Contact copied</string>
     <string name="find_belayer_copy_contact_button">Copy Contact</string>
     <string name="find_belayer_message_button">Message</string>
+    <string name="find_belayer_message_unavailable">This climber cannot be messaged right now.</string>
+    <string name="find_belayer_message_self_error">Use the inbox to review your own conversations.</string>
     <string name="find_belayer_delete_button">Delete Post</string>
     <string name="find_belayer_delete_title">Delete Post</string>
     <string name="find_belayer_delete_message">Are you sure you want to delete this belayer post?</string>

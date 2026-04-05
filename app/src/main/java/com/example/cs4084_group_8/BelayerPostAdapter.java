@@ -19,6 +19,8 @@ import java.util.Locale;
 
 public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.BelayerPostViewHolder> {
     public interface ActionListener {
+        void onMessage(BelayerPost post);
+
         void onCopyContact(BelayerPost post);
 
         void onDeletePost(BelayerPost post);
@@ -84,9 +86,11 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
         }
 
         holder.tvDisplayName.setOnClickListener(view -> actionListener.onViewProfile(post));
+        holder.btnMessageBelayer.setOnClickListener(view -> actionListener.onMessage(post));
         holder.btnCopyContact.setOnClickListener(view -> actionListener.onCopyContact(post));
 
         boolean isOwner = !TextUtils.isEmpty(currentUserUid) && currentUserUid.equals(post.getAuthorUid());
+        holder.btnMessageBelayer.setVisibility(isOwner ? View.GONE : View.VISIBLE);
         holder.btnDeleteBelayerPost.setVisibility(isOwner ? View.VISIBLE : View.GONE);
         holder.btnDeleteBelayerPost.setOnClickListener(view -> actionListener.onDeletePost(post));
     }
@@ -113,6 +117,7 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
         private final TextView tvClimbCapability;
         private final TextView tvContactHandle;
         private final TextView tvNotes;
+        private final MaterialButton btnMessageBelayer;
         private final MaterialButton btnCopyContact;
         private final MaterialButton btnDeleteBelayerPost;
 
@@ -127,6 +132,7 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
             tvClimbCapability = itemView.findViewById(R.id.tvBelayerClimbCapability);
             tvContactHandle = itemView.findViewById(R.id.tvBelayerContactHandle);
             tvNotes = itemView.findViewById(R.id.tvBelayerNotes);
+            btnMessageBelayer = itemView.findViewById(R.id.btnMessageBelayer);
             btnCopyContact = itemView.findViewById(R.id.btnCopyBelayerContact);
             btnDeleteBelayerPost = itemView.findViewById(R.id.btnDeleteBelayerPost);
         }

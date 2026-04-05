@@ -157,6 +157,11 @@ public class FindBelayerActivity extends AppCompatActivity {
                 getLayoutInflater(),
                 new BelayerPostAdapter.ActionListener() {
                     @Override
+                    public void onMessage(BelayerPost post) {
+                        openConversation(post);
+                    }
+
+                    @Override
                     public void onCopyContact(BelayerPost post) {
                         copyContact(post);
                     }
@@ -330,6 +335,22 @@ public class FindBelayerActivity extends AppCompatActivity {
 
         clipboardManager.setPrimaryClip(ClipData.newPlainText("belayer_contact", contactHandle));
         Toast.makeText(this, R.string.find_belayer_contact_copied, Toast.LENGTH_SHORT).show();
+    }
+
+    private void openConversation(BelayerPost post) {
+        if (TextUtils.isEmpty(post.getAuthorUid())) {
+            Toast.makeText(this, R.string.find_belayer_message_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentUser != null && TextUtils.equals(currentUser.getUid(), post.getAuthorUid())) {
+            Toast.makeText(this, R.string.find_belayer_message_self_error, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, ChatActivity.class);
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_ID, post.getAuthorUid());
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_NAME, post.getAuthorName());
+        startActivity(intent);
     }
 
     private void openProfile(BelayerPost post) {
