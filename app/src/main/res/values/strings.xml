@@ -5,6 +5,7 @@
     <string name="home_find_belayer_button">Find A Belayer</string>
     <string name="home_route_log_button">Route Log</string>
     <string name="home_messages_button">Messages</string>
+    <string name="home_blogs_button">Blogs</string>
     <string name="admin_login_entry_button">Admin Login</string>
     <string name="admin_login_title">Admin Login</string>
     <string name="admin_login_subtitle">Restricted access for elevated accounts</string>
@@ -172,6 +173,8 @@
     <string name="inbox_empty_state">No conversations yet. Start a chat from a belayer post.</string>
     <string name="inbox_empty_preview">No messages yet</string>
     <string name="inbox_load_failed">Failed to load conversations: %1$s</string>
+    <string name="blog_post_you_badge">You</string>
+    <string name="blog_post_delete_button">Delete Blog</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>

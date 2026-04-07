@@ -88,6 +88,40 @@ service cloud.firestore {
       allow update, delete: if admin() || resource.data.authorUid == request.auth.uid;
     }
 
+    match /blogs/{blogId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'title', 'body', 'createdAt'])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0
+          && request.resource.data.authorName.size() <= 80
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 6000;
+
+      allow update: if admin()
+          || (signedIn()
+              && resource.data.authorUid == request.auth.uid
+              && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'title', 'body', 'createdAt'])
+              && request.resource.data.authorUid == resource.data.authorUid
+              && request.resource.data.authorName is string
+              && request.resource.data.authorName.size() > 0
+              && request.resource.data.authorName.size() <= 80
+              && request.resource.data.title is string
+              && request.resource.data.title.size() > 0
+              && request.resource.data.title.size() <= 120
+              && request.resource.data.body is string
+              && request.resource.data.body.size() > 0
+              && request.resource.data.body.size() <= 6000);
+
+      allow delete: if admin() || resource.data.authorUid == request.auth.uid;
+    }
+
     match /conversations/{conversationId} {
       allow read: if signedIn() && request.auth.uid in resource.data.participants;
 
