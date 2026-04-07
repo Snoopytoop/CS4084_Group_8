@@ -45,6 +45,7 @@ public class HomeActivity extends AppCompatActivity {
     private MaterialButton btnQuickRouteLog;
     private MaterialButton btnQuickMessages;
     private MaterialButton btnQuickFindBelayer;
+    private MaterialButton btnQuickBlogs;
     private RecyclerView rvPosts;
     private TextView tvEmptyFeed;
 
@@ -65,6 +66,7 @@ public class HomeActivity extends AppCompatActivity {
         btnQuickRouteLog = findViewById(R.id.btnQuickRouteLog);
         btnQuickMessages = findViewById(R.id.btnQuickMessages);
         btnQuickFindBelayer = findViewById(R.id.btnQuickFindBelayer);
+        btnQuickBlogs = findViewById(R.id.btnQuickBlogs);
         rvPosts = findViewById(R.id.rvPosts);
         tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
 
@@ -106,6 +108,7 @@ public class HomeActivity extends AppCompatActivity {
         btnQuickRouteLog.setOnClickListener(v -> startActivity(new Intent(this, RouteLogActivity.class)));
         btnQuickMessages.setOnClickListener(v -> startActivity(new Intent(this, InboxActivity.class)));
         btnQuickFindBelayer.setOnClickListener(v -> startActivity(new Intent(this, FindBelayerActivity.class)));
+        btnQuickBlogs.setOnClickListener(v -> startActivity(new Intent(this, BlogsActivity.class)));
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);

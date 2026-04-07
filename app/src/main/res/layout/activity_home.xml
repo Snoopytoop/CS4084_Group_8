@@ -25,7 +25,7 @@
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/quickActionsRow" />
+        app:layout_constraintTop_toBottomOf="@id/btnQuickBlogs" />
 
     <LinearLayout
         android:id="@+id/quickActionsRow"
@@ -65,6 +65,17 @@
             android:layout_weight="1"
             android:text="@string/home_find_belayer_button" />
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnQuickBlogs"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/home_blogs_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/quickActionsRow" />
 
     <TextView
         android:id="@+id/tvEmptyFeed"
