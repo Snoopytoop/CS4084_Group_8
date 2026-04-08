@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
-        Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
+        Log.d(TAG, "Firebase initialized. projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
         tvSwitchMode.setOnClickListener(v -> {
@@ -129,67 +129,72 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void registerWithEmail(String email, String password, String username) {
+        Log.d(TAG, "Attempting registration for email: " + email);
         firebaseAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    if (!task.isSuccessful()) {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Auth registration successful for: " + email);
+                        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
+                        if (currentUser == null) {
+                            setLoading(false);
+                            Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
+                        UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                .setDisplayName(username)
+                                .build();
+
+                        currentUser.updateProfile(profileUpdates)
+                                .addOnCompleteListener(profileTask -> {
+                                    Map<String, Object> userProfile = new HashMap<>();
+                                    userProfile.put("uid", currentUser.getUid());
+                                    userProfile.put("email", email);
+                                    userProfile.put("username", username);
+                                    userProfile.put("profileCompleted", false);
+                                    userProfile.put("createdAt", FieldValue.serverTimestamp());
+                                    userProfile.put("updatedAt", FieldValue.serverTimestamp());
+
+                                    firebaseFirestore.collection("users")
+                                            .document(currentUser.getUid())
+                                            .set(userProfile, SetOptions.merge())
+                                            .addOnSuccessListener(unused -> {
+                                                Log.d(TAG, "Firestore profile write success for uid=" + currentUser.getUid());
+                                                setLoading(false);
+                                                Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
+                                                navigateToProfileSetup();
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Log.e(TAG, "Firestore profile write failed for uid=" + currentUser.getUid(), e);
+                                                setLoading(false);
+                                                Toast.makeText(this, "Profile save failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            });
+                                });
+                    } else {
+                        Log.e(TAG, "Auth registration failed", task.getException());
                         setLoading(false);
-                        Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
-                        return;
+                        Toast.makeText(this, "Auth failed: " + readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
-
-                    FirebaseUser currentUser = firebaseAuth.getCurrentUser();
-                    if (currentUser == null) {
-                        setLoading(false);
-                        Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-
-                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                            .setDisplayName(username)
-                            .build();
-
-                    currentUser.updateProfile(profileUpdates)
-                            .addOnCompleteListener(profileTask -> {
-                                Map<String, Object> userProfile = new HashMap<>();
-                                userProfile.put("uid", currentUser.getUid());
-                                userProfile.put("email", email);
-                                userProfile.put("username", username);
-                                userProfile.put("profileCompleted", false);
-                                userProfile.put("createdAt", FieldValue.serverTimestamp());
-                                userProfile.put("updatedAt", FieldValue.serverTimestamp());
-
-                                firebaseFirestore.collection("users")
-                                        .document(currentUser.getUid())
-                                        .set(userProfile, SetOptions.merge())
-                                        .addOnSuccessListener(unused -> {
-                                            Log.d(TAG, "Profile write success for uid=" + currentUser.getUid());
-                                            setLoading(false);
-                                            Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
-                                            navigateToProfileSetup();
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Log.e(TAG, "Profile write failed on register uid=" + currentUser.getUid(), e);
-                                            setLoading(false);
-                                            Toast.makeText(this, "Profile save failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                        });
-                            });
                 });
     }
 
     private void loginWithEmail(String email, String password) {
+        Log.d(TAG, "Attempting login for email: " + email);
         firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    setLoading(false);
                     if (task.isSuccessful()) {
+                        Log.d(TAG, "Auth login successful for: " + email);
                         FirebaseUser currentUser = firebaseAuth.getCurrentUser();
                         if (currentUser == null) {
+                            setLoading(false);
                             Toast.makeText(this, "Login failed. Please try again.", Toast.LENGTH_LONG).show();
                             return;
                         }
-
                         upsertUserProfileAndRoute(currentUser, email, true);
                     } else {
-                        Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Auth login failed", task.getException());
+                        setLoading(false);
+                        Toast.makeText(this, "Login failed: " + readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -211,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
                 .document(currentUser.getUid())
                 .set(userProfile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
+                    Log.d(TAG, "Firestore profile upsert success for uid=" + currentUser.getUid());
                     firebaseFirestore.collection("users")
                             .document(currentUser.getUid())
                             .get()
@@ -219,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
                                 if (showLoginToast) {
                                     Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
                                 }
-
+                                setLoading(false);
                                 if (Boolean.TRUE.equals(profileCompleted)) {
                                     navigateToHome();
                                 } else {
@@ -227,12 +233,14 @@ public class MainActivity extends AppCompatActivity {
                                 }
                             })
                             .addOnFailureListener(e -> {
-                                Log.e(TAG, "Profile read failed uid=" + currentUser.getUid(), e);
+                                Log.e(TAG, "Firestore profile read failed for uid=" + currentUser.getUid(), e);
+                                setLoading(false);
                                 navigateToProfileSetup();
                             });
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
+                    Log.e(TAG, "Firestore profile upsert failed for uid=" + currentUser.getUid(), e);
+                    setLoading(false);
                     Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     navigateToProfileSetup();
                 });
@@ -241,6 +249,7 @@ public class MainActivity extends AppCompatActivity {
     private void setLoading(boolean isLoading) {
         btnRegister.setEnabled(!isLoading);
         tvSwitchMode.setEnabled(!isLoading);
+        // You might want to add a ProgressBar here in your layout
     }
 
     private void clearInputErrors() {
@@ -257,10 +266,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String readableError(Exception exception) {
-        if (exception == null || exception.getMessage() == null) {
-            return "Something went wrong. Please try again.";
+        if (exception == null) return "Unknown error";
+        String message = exception.getMessage();
+        if (message == null) return "Something went wrong";
+        
+        if (message.contains("Unable to resolve host")) {
+            return "No internet connection. Please check your network.";
         }
-        return exception.getMessage();
+        return message;
     }
 
     private void navigateToHome() {

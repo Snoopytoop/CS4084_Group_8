@@ -68,6 +68,7 @@ public class LeaderboardActivity extends AppCompatActivity {
         btnSubmitTime = findViewById(R.id.btnSubmitTime);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ShapeableImageView ivNavProfile = findViewById(R.id.ivNavProfile);
@@ -90,6 +91,10 @@ public class LeaderboardActivity extends AppCompatActivity {
 
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavLeaderboard.setOnClickListener(v -> {
