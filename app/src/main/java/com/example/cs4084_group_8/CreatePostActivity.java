@@ -108,12 +108,17 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavLeaderboard.setOnClickListener(v -> {

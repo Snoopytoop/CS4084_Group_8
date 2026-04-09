@@ -51,6 +51,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private ImageButton btnSettings;
     private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
+    private ImageButton btnNavSearch;
     private ImageButton btnNavCreatePost;
     private ImageButton btnNavLeaderboard;
     private ShapeableImageView ivNavProfile;
@@ -74,6 +75,7 @@ public class UserProfileActivity extends AppCompatActivity {
         btnSettings = findViewById(R.id.btnSettings);
         btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
+        btnNavSearch = findViewById(R.id.btnNavSearch);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
@@ -101,9 +103,14 @@ public class UserProfileActivity extends AppCompatActivity {
 
         btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
+        
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
+            overridePendingTransition(0, 0);
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavCreatePost.setOnClickListener(v -> {
@@ -115,7 +122,8 @@ public class UserProfileActivity extends AppCompatActivity {
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
-            // Already on profile.
+            // Already on profile, but if viewing another user, we might want to navigate to own? 
+            // For now keep as is.
         });
 
         // Adjust nav bar position for gesture/button navigation

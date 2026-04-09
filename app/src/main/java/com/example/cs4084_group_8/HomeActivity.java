@@ -60,6 +60,7 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
@@ -92,6 +93,10 @@ public class HomeActivity extends AppCompatActivity {
 
         btnNavHome.setOnClickListener(v -> {
             // Already on home.
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
+            overridePendingTransition(0, 0);
         });
         btnNavLeaderboard.setOnClickListener(v -> {
             startActivity(new Intent(this, LeaderboardActivity.class));
