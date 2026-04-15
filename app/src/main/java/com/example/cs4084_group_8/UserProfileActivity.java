@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -57,11 +58,14 @@ public class UserProfileActivity extends AppCompatActivity {
     private ShapeableImageView ivNavProfile;
     private RecyclerView rvMyPosts;
     private TextView tvEmptyMyPosts;
+    private MaterialButton btnMessageUser;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
     private PostAdapter postAdapter;
     private ListenerRegistration myPostsListener;
+    private String viewedUserId = "";
+    private String viewedUsername = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +85,7 @@ public class UserProfileActivity extends AppCompatActivity {
         ivNavProfile = findViewById(R.id.ivNavProfile);
         rvMyPosts = findViewById(R.id.rvMyPosts);
         tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
+        btnMessageUser = findViewById(R.id.btnMessageUser);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -125,6 +130,7 @@ public class UserProfileActivity extends AppCompatActivity {
             // Already on profile, but if viewing another user, we might want to navigate to own? 
             // For now keep as is.
         });
+        btnMessageUser.setOnClickListener(v -> openDirectMessage());
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);
@@ -167,16 +173,19 @@ public class UserProfileActivity extends AppCompatActivity {
             finish();
             return;
         }
+        viewedUserId = targetUserId;
         // If viewing own profile → show email, else hide it
         if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
             // Viewing your own profile
             tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
             tvEmail.setVisibility(View.VISIBLE);
             btnSettings.setVisibility(View.VISIBLE); // show settings
+            btnMessageUser.setVisibility(View.GONE);
         } else {
             // Viewing someone else's profile
             tvEmail.setVisibility(View.GONE);
             btnSettings.setVisibility(View.GONE); // hide settings
+            btnMessageUser.setVisibility(View.VISIBLE);
         }
 
         // Load user data from Firestore
@@ -189,6 +198,7 @@ public class UserProfileActivity extends AppCompatActivity {
                     String imageUrl = snapshot.getString("profileImageUrl");
 
                     tvUsername.setText(TextUtils.isEmpty(username) ? "No username yet" : username);
+                    viewedUsername = TextUtils.isEmpty(username) ? "Climber" : username;
                     tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
 
                     if (!TextUtils.isEmpty(imageUrl)) {
@@ -203,6 +213,21 @@ public class UserProfileActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void openDirectMessage() {
+        if (currentUser == null || TextUtils.isEmpty(viewedUserId)) {
+            return;
+        }
+        if (TextUtils.equals(currentUser.getUid(), viewedUserId)) {
+            Toast.makeText(this, "You cannot message yourself.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, ChatActivity.class);
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_ID, viewedUserId);
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_NAME, viewedUsername);
+        startActivity(intent);
     }
 
     private void listenForMyPosts(String uid) {

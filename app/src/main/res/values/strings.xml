@@ -197,9 +197,10 @@
     <string name="chat_load_failed">Failed to load messages: %1$s</string>
     <string name="chat_current_user_fallback">You</string>
     <string name="chat_other_user_fallback">Climber</string>
+    <string name="profile_message_button">Message</string>
     <string name="inbox_title">Messages</string>
     <string name="inbox_subtitle">Recent direct conversations</string>
-    <string name="inbox_empty_state">No conversations yet. Start a chat from a belayer post.</string>
+    <string name="inbox_empty_state">No conversations yet. Start a chat from any user profile or belayer post.</string>
     <string name="inbox_empty_preview">No messages yet</string>
     <string name="inbox_load_failed">Failed to load conversations: %1$s</string>
     <!-- Strings used for fragments for navigation -->

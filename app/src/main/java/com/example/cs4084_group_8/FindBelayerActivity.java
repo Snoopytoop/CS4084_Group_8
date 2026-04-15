@@ -25,9 +25,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -278,7 +278,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         rvBelayerPosts.setVisibility(RecyclerView.GONE);
 
         belayerPostsListener = firestore.collection(FirestoreCollections.BELAYER_POSTS)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
                         rvBelayerPosts.setVisibility(RecyclerView.GONE);
@@ -297,6 +296,10 @@ public class FindBelayerActivity extends AppCompatActivity {
                             }
                         });
                     }
+                    posts.sort(Comparator.comparing(
+                            BelayerPost::getCreatedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())
+                    ).reversed());
 
                     belayerPostAdapter.submitPosts(posts);
                     updateSummary(posts);
