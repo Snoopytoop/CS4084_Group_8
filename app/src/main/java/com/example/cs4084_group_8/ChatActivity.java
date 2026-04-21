@@ -91,6 +91,7 @@ public class ChatActivity extends AppCompatActivity {
             navigateToAuth();
             return;
         }
+        updateOfflineQueueUi();
         listenForMessages();
     }
 
@@ -214,6 +215,7 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         btnSendChatMessage.setEnabled(false);
+        boolean sentWhileOffline = !NetworkStatus.isOnline(this);
 
         String senderName = firstNonEmpty(
                 currentUserName,
@@ -257,11 +259,27 @@ public class ChatActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     btnSendChatMessage.setEnabled(true);
                     etChatMessage.setText("");
+                    if (sentWhileOffline) {
+                        Toast.makeText(this, R.string.chat_offline_queued_toast, Toast.LENGTH_LONG).show();
+                    }
+                    updateOfflineQueueUi();
                 })
                 .addOnFailureListener(e -> {
                     btnSendChatMessage.setEnabled(true);
                     Toast.makeText(this, getString(R.string.chat_send_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                    updateOfflineQueueUi();
                 });
+    }
+
+    private void updateOfflineQueueUi() {
+        if (!NetworkStatus.isOnline(this)) {
+            toolbarChat.setSubtitle(R.string.chat_subtitle_offline_queue);
+            tilChatMessage.setHelperText(getString(R.string.chat_offline_queue_helper));
+            return;
+        }
+
+        toolbarChat.setSubtitle(R.string.chat_subtitle);
+        tilChatMessage.setHelperText(null);
     }
 
     private void navigateToAuth() {

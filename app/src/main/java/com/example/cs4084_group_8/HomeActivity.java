@@ -48,6 +48,7 @@ public class HomeActivity extends AppCompatActivity {
     private MaterialButton btnQuickMessages;
     private MaterialButton btnQuickFindBelayer;
     private MaterialButton btnQuickBlogs;
+    private MaterialButton btnRetryConnection;
     private RecyclerView rvPosts;
     private TextView tvEmptyFeed;
 
@@ -70,6 +71,7 @@ public class HomeActivity extends AppCompatActivity {
         btnQuickMessages = findViewById(R.id.btnQuickMessages);
         btnQuickFindBelayer = findViewById(R.id.btnQuickFindBelayer);
         btnQuickBlogs = findViewById(R.id.btnQuickBlogs);
+        btnRetryConnection = findViewById(R.id.btnRetryConnection);
         rvPosts = findViewById(R.id.rvPosts);
         tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
 
@@ -104,6 +106,7 @@ public class HomeActivity extends AppCompatActivity {
         btnQuickMessages.setOnClickListener(v -> openServerFeature(InboxActivity.class));
         btnQuickFindBelayer.setOnClickListener(v -> openServerFeature(FindBelayerActivity.class));
         btnQuickBlogs.setOnClickListener(v -> openServerFeature(BlogsActivity.class));
+        btnRetryConnection.setOnClickListener(v -> retryOnlineConnection());
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);
@@ -125,6 +128,8 @@ public class HomeActivity extends AppCompatActivity {
             loadNavProfileImage(user.getUid(), ivNavProfile);
             listenForPosts();
             enableOnlineUi();
+            btnRetryConnection.setVisibility(View.GONE);
+            rvPosts.setVisibility(View.VISIBLE);
         } else if (isOfflineMode()) {
             if (postsListener != null) {
                 postsListener.remove();
@@ -135,11 +140,15 @@ public class HomeActivity extends AppCompatActivity {
             tvEmptyFeed.setVisibility(View.VISIBLE);
             tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
             enableOfflineUi();
+            btnRetryConnection.setVisibility(View.VISIBLE);
+            rvPosts.setVisibility(View.GONE);
         } else {
             ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
             tvEmptyFeed.setText("Please log in to view and create posts.");
             tvEmptyFeed.setVisibility(View.VISIBLE);
             enableOfflineUi();
+            btnRetryConnection.setVisibility(View.VISIBLE);
+            rvPosts.setVisibility(View.GONE);
         }
     }
 
@@ -377,5 +386,20 @@ public class HomeActivity extends AppCompatActivity {
                 .placeholder(android.R.drawable.ic_menu_camera)
                 .error(android.R.drawable.ic_menu_camera)
                 .into(targetView);
+    }
+
+    private void retryOnlineConnection() {
+        if (!NetworkStatus.isOnline(this)) {
+            Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (OfflineSessionManager.isOfflineModeEnabled(this)
+                && FirebaseAuth.getInstance().getCurrentUser() == null) {
+            OfflineSessionManager.disableOfflineMode(this);
+        }
+
+        Toast.makeText(this, R.string.home_retry_online_success, Toast.LENGTH_SHORT).show();
+        recreate();
     }
 }
