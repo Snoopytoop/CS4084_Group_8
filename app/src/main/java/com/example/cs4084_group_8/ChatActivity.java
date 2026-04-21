@@ -187,12 +187,14 @@ public class ChatActivity extends AppCompatActivity {
                             DirectMessage message = documentSnapshot.toObject(DirectMessage.class);
                             if (message != null) {
                                 message.setId(documentSnapshot.getId());
+                                message.setPendingWrite(documentSnapshot.getMetadata().hasPendingWrites());
                                 messages.add(message);
                             }
                         });
                     }
 
                     directMessageAdapter.submitMessages(messages);
+                    updateOfflineQueueUi();
 
                     boolean hasMessages = !messages.isEmpty();
                     rvChatMessages.setVisibility(hasMessages ? RecyclerView.VISIBLE : RecyclerView.GONE);

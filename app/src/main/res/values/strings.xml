@@ -13,9 +13,11 @@
     <string name="main_offline_mode_started">Offline mode enabled. Local route logging is available.</string>
     <string name="home_offline_mode_empty_state">Offline mode is on. Route Log stays available, but feed, chat, profile, and posting features need the server.</string>
     <string name="home_offline_feature_unavailable">This feature needs the server and is unavailable in offline mode.</string>
+    <string name="home_offline_chip">Offline</string>
     <string name="home_retry_connection">Retry Going Online</string>
     <string name="home_retry_still_offline">Still offline. Check your connection and try again.</string>
     <string name="home_retry_online_success">Connection restored. Refreshing online features.</string>
+    <string name="home_retry_already_online">You are already online.</string>
     <string name="admin_login_title">Admin Login</string>
     <string name="admin_login_subtitle">Restricted access for elevated accounts</string>
     <string name="admin_login_card_title">Sign in as admin</string>
@@ -210,6 +212,8 @@
     <string name="chat_send_failed">Failed to send message: %1$s</string>
     <string name="chat_offline_queue_helper">Offline now. Messages you send are queued and will send when your phone goes online again.</string>
     <string name="chat_offline_queued_toast">Message queued. It will send automatically when you are online again.</string>
+    <string name="chat_message_status_pending">Pending</string>
+    <string name="chat_message_status_sent_ticks">✓✓</string>
     <string name="chat_load_failed">Failed to load messages: %1$s</string>
     <string name="chat_current_user_fallback">You</string>
     <string name="chat_other_user_fallback">Climber</string>

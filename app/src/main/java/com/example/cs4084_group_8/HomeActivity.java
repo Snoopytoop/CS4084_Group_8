@@ -30,6 +30,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,9 +52,12 @@ public class HomeActivity extends AppCompatActivity {
     private MaterialButton btnRetryConnection;
     private RecyclerView rvPosts;
     private TextView tvEmptyFeed;
+    private TextView tvOfflineChip;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
+    private boolean firebaseServerReachable;
+    private boolean firebaseProbeInProgress;
     private PostAdapter postAdapter;
     private ListenerRegistration postsListener;
 
@@ -74,6 +78,7 @@ public class HomeActivity extends AppCompatActivity {
         btnRetryConnection = findViewById(R.id.btnRetryConnection);
         rvPosts = findViewById(R.id.rvPosts);
         tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
+        tvOfflineChip = findViewById(R.id.tvOfflineChip);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -124,32 +129,19 @@ public class HomeActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         currentUser = user;
-        if (user != null && !isOfflineMode()) {
-            loadNavProfileImage(user.getUid(), ivNavProfile);
-            listenForPosts();
-            enableOnlineUi();
-            btnRetryConnection.setVisibility(View.GONE);
-            rvPosts.setVisibility(View.VISIBLE);
-        } else if (isOfflineMode()) {
-            if (postsListener != null) {
-                postsListener.remove();
-                postsListener = null;
-            }
-            postAdapter.submitList(new ArrayList<>());
-            ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
-            tvEmptyFeed.setVisibility(View.VISIBLE);
-            tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
-            enableOfflineUi();
-            btnRetryConnection.setVisibility(View.VISIBLE);
-            rvPosts.setVisibility(View.GONE);
-        } else {
-            ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
-            tvEmptyFeed.setText("Please log in to view and create posts.");
-            tvEmptyFeed.setVisibility(View.VISIBLE);
-            enableOfflineUi();
-            btnRetryConnection.setVisibility(View.VISIBLE);
-            rvPosts.setVisibility(View.GONE);
+        hideOfflineIndicators();
+
+        if (isForcedOfflineSession()) {
+            applyOfflineState();
+            return;
         }
+
+        if (user == null) {
+            applyLoggedOutState();
+            return;
+        }
+
+        probeFirebaseServerAndRender(user);
     }
 
     @Override
@@ -303,19 +295,13 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void openServerFeature(Class<?> activityClass) {
-        if (isOfflineMode()) {
+        if (!firebaseServerReachable) {
             Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
             return;
         }
 
         startActivity(new Intent(this, activityClass));
         overridePendingTransition(0, 0);
-    }
-
-    private boolean isOfflineMode() {
-        boolean explicitOfflineMode = OfflineSessionManager.isOfflineModeEnabled(this)
-                && FirebaseAuth.getInstance().getCurrentUser() == null;
-        return explicitOfflineMode || !NetworkStatus.isOnline(this);
     }
 
     private void enableOfflineUi() {
@@ -389,17 +375,121 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void retryOnlineConnection() {
-        if (!NetworkStatus.isOnline(this)) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        currentUser = user;
+
+        if (isForcedOfflineSession()) {
             Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (OfflineSessionManager.isOfflineModeEnabled(this)
-                && FirebaseAuth.getInstance().getCurrentUser() == null) {
-            OfflineSessionManager.disableOfflineMode(this);
+        if (user == null) {
+            Toast.makeText(this, R.string.home_retry_already_online, Toast.LENGTH_SHORT).show();
+            return;
         }
 
+        if (!NetworkStatus.isOnline(this)) {
+            applyOfflineState();
+            Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Instant reconnect UX: show online UI immediately, then verify against Firebase server.
+        firebaseServerReachable = true;
+        applyOnlineState(user);
         Toast.makeText(this, R.string.home_retry_online_success, Toast.LENGTH_SHORT).show();
-        recreate();
+
+        verifyFirebaseServerAfterRetry(user);
+    }
+
+    private void verifyFirebaseServerAfterRetry(FirebaseUser user) {
+        if (firebaseProbeInProgress) {
+            return;
+        }
+        firebaseProbeInProgress = true;
+
+        firestore.collection(FirestoreCollections.USERS)
+                .document(user.getUid())
+                .get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> {
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = true;
+                })
+                .addOnFailureListener(e -> {
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = false;
+                    applyOfflineState();
+                    Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void probeFirebaseServerAndRender(FirebaseUser user) {
+        if (firebaseProbeInProgress) {
+            return;
+        }
+        firebaseProbeInProgress = true;
+
+        firestore.collection(FirestoreCollections.USERS)
+                .document(user.getUid())
+                .get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> {
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = true;
+                    applyOnlineState(user);
+                })
+                .addOnFailureListener(e -> {
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = false;
+                    applyOfflineState();
+                    Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void applyOnlineState(FirebaseUser user) {
+        hideOfflineIndicators();
+        loadNavProfileImage(user.getUid(), ivNavProfile);
+        listenForPosts();
+        enableOnlineUi();
+        rvPosts.setVisibility(View.VISIBLE);
+    }
+
+    private void applyOfflineState() {
+        if (postsListener != null) {
+            postsListener.remove();
+            postsListener = null;
+        }
+        postAdapter.submitList(new ArrayList<>());
+        ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
+        enableOfflineUi();
+        showOfflineIndicators();
+        rvPosts.setVisibility(View.GONE);
+    }
+
+    private void applyLoggedOutState() {
+        firebaseServerReachable = false;
+        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+        tvEmptyFeed.setText("Please log in to view and create posts.");
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        enableOfflineUi();
+        hideOfflineIndicators();
+        rvPosts.setVisibility(View.GONE);
+    }
+
+    private void hideOfflineIndicators() {
+        tvOfflineChip.setVisibility(View.GONE);
+        btnRetryConnection.setVisibility(View.GONE);
+    }
+
+    private void showOfflineIndicators() {
+        tvOfflineChip.setVisibility(View.VISIBLE);
+        tvOfflineChip.setText(R.string.home_offline_chip);
+        btnRetryConnection.setVisibility(View.VISIBLE);
+    }
+
+    private boolean isForcedOfflineSession() {
+        return OfflineSessionManager.isOfflineModeEnabled(this)
+                && FirebaseAuth.getInstance().getCurrentUser() == null;
     }
 }
