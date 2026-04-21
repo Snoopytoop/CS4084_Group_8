@@ -10,8 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.Timestamp;
-
+import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +56,7 @@ public class RouteLogAdapter extends RecyclerView.Adapter<RouteLogAdapter.RouteL
                 holder.itemView.getContext().getString(R.string.route_log_attempts_chip_format, entry.getAttempts())
         );
         holder.tvRouteStatus.setText(entry.getSendStatus());
-        holder.tvRouteLoggedAt.setText(formatTimestamp(entry.getLoggedAt()));
+        holder.tvRouteLoggedAt.setText(formatTimestamp(entry));
 
         if (TextUtils.isEmpty(entry.getNotes())) {
             holder.tvRouteNotes.setVisibility(View.GONE);
@@ -74,11 +73,12 @@ public class RouteLogAdapter extends RecyclerView.Adapter<RouteLogAdapter.RouteL
         return entries.size();
     }
 
-    private String formatTimestamp(Timestamp timestamp) {
-        if (timestamp == null) {
+    private String formatTimestamp(RouteLogEntry entry) {
+        long timestampMillis = entry.getSortTimestampMillis();
+        if (timestampMillis <= 0L) {
             return "";
         }
-        return timestampFormat.format(timestamp.toDate());
+        return timestampFormat.format(new Date(timestampMillis));
     }
 
     static class RouteLogViewHolder extends RecyclerView.ViewHolder {

@@ -198,6 +198,11 @@ public class FindBelayerActivity extends AppCompatActivity {
     }
 
     private void publishBelayerPost() {
+        if (isServerAccessBlocked()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         clearInputErrors();
 
         String displayName = valueOf(etBelayerName);
@@ -254,6 +259,12 @@ public class FindBelayerActivity extends AppCompatActivity {
         postData.put("contactHandle", contactHandle);
         postData.put("notes", notes);
         postData.put("createdAt", FieldValue.serverTimestamp());
+
+        if (isServerAccessBlocked()) {
+            btnPublishBelayerPost.setEnabled(true);
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         firestore.collection(FirestoreCollections.BELAYER_POSTS)
                 .add(postData)
@@ -428,5 +439,9 @@ public class FindBelayerActivity extends AppCompatActivity {
             return "";
         }
         return view.getText().toString().trim();
+    }
+
+    private boolean isServerAccessBlocked() {
+        return OfflineSessionManager.isOfflineModeEnabled(this) || !NetworkStatus.isOnline(this);
     }
 }

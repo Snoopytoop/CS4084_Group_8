@@ -42,6 +42,8 @@ public class HomeActivity extends AppCompatActivity {
 
     private ShapeableImageView ivNavProfile;
     private ImageButton btnNavCreatePost;
+    private ImageButton btnNavSearch;
+    private ImageButton btnNavLeaderboard;
     private MaterialButton btnQuickRouteLog;
     private MaterialButton btnQuickMessages;
     private MaterialButton btnQuickFindBelayer;
@@ -60,8 +62,8 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
-        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        btnNavSearch = findViewById(R.id.btnNavSearch);
+        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         btnQuickRouteLog = findViewById(R.id.btnQuickRouteLog);
@@ -94,26 +96,14 @@ public class HomeActivity extends AppCompatActivity {
         btnNavHome.setOnClickListener(v -> {
             // Already on home.
         });
-        btnNavSearch.setOnClickListener(v -> {
-            startActivity(new Intent(this, SearchActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        ivNavProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        btnNavCreatePost.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreatePostActivity.class));
-            overridePendingTransition(0, 0);
-        });
+        btnNavSearch.setOnClickListener(v -> openServerFeature(SearchActivity.class));
+        btnNavLeaderboard.setOnClickListener(v -> openServerFeature(LeaderboardActivity.class));
+        ivNavProfile.setOnClickListener(v -> openServerFeature(UserProfileActivity.class));
+        btnNavCreatePost.setOnClickListener(v -> openServerFeature(CreatePostActivity.class));
         btnQuickRouteLog.setOnClickListener(v -> startActivity(new Intent(this, RouteLogActivity.class)));
-        btnQuickMessages.setOnClickListener(v -> startActivity(new Intent(this, InboxActivity.class)));
-        btnQuickFindBelayer.setOnClickListener(v -> startActivity(new Intent(this, FindBelayerActivity.class)));
-        btnQuickBlogs.setOnClickListener(v -> startActivity(new Intent(this, BlogsActivity.class)));
+        btnQuickMessages.setOnClickListener(v -> openServerFeature(InboxActivity.class));
+        btnQuickFindBelayer.setOnClickListener(v -> openServerFeature(FindBelayerActivity.class));
+        btnQuickBlogs.setOnClickListener(v -> openServerFeature(BlogsActivity.class));
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);
@@ -131,13 +121,25 @@ public class HomeActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         currentUser = user;
-        if (user != null) {
+        if (user != null && !isOfflineMode()) {
             loadNavProfileImage(user.getUid(), ivNavProfile);
             listenForPosts();
+            enableOnlineUi();
+        } else if (isOfflineMode()) {
+            if (postsListener != null) {
+                postsListener.remove();
+                postsListener = null;
+            }
+            postAdapter.submitList(new ArrayList<>());
+            ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+            tvEmptyFeed.setVisibility(View.VISIBLE);
+            tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
+            enableOfflineUi();
         } else {
             ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
             tvEmptyFeed.setText("Please log in to view and create posts.");
             tvEmptyFeed.setVisibility(View.VISIBLE);
+            enableOfflineUi();
         }
     }
 
@@ -289,6 +291,58 @@ public class HomeActivity extends AppCompatActivity {
                     });
         }));
         dialog.show();
+    }
+
+    private void openServerFeature(Class<?> activityClass) {
+        if (isOfflineMode()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        startActivity(new Intent(this, activityClass));
+        overridePendingTransition(0, 0);
+    }
+
+    private boolean isOfflineMode() {
+        boolean explicitOfflineMode = OfflineSessionManager.isOfflineModeEnabled(this)
+                && FirebaseAuth.getInstance().getCurrentUser() == null;
+        return explicitOfflineMode || !NetworkStatus.isOnline(this);
+    }
+
+    private void enableOfflineUi() {
+        setDisabledUiState(btnNavSearch);
+        setDisabledUiState(btnNavLeaderboard);
+        setDisabledUiState(btnNavCreatePost);
+        setDisabledUiState(btnQuickMessages);
+        setDisabledUiState(btnQuickFindBelayer);
+        setDisabledUiState(btnQuickBlogs);
+        setDisabledUiState(ivNavProfile);
+    }
+
+    private void enableOnlineUi() {
+        setEnabledUiState(btnNavSearch);
+        setEnabledUiState(btnNavLeaderboard);
+        setEnabledUiState(btnNavCreatePost);
+        setEnabledUiState(btnQuickMessages);
+        setEnabledUiState(btnQuickFindBelayer);
+        setEnabledUiState(btnQuickBlogs);
+        setEnabledUiState(ivNavProfile);
+    }
+
+    private void setDisabledUiState(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setEnabled(false);
+        view.setAlpha(0.4f);
+    }
+
+    private void setEnabledUiState(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setEnabled(true);
+        view.setAlpha(1f);
     }
 
     private void loadNavProfileImage(String uid, ImageView targetView) {

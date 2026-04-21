@@ -7,6 +7,12 @@
     <string name="home_messages_button">Messages</string>
     <string name="home_blogs_button">Blogs</string>
     <string name="admin_login_entry_button">Admin Login</string>
+    <string name="main_offline_button">Continue offline</string>
+    <string name="main_offline_mode_title">Offline mode</string>
+    <string name="main_offline_mode_description">You can track routes locally and review local history without connecting to the server.</string>
+    <string name="main_offline_mode_started">Offline mode enabled. Local route logging is available.</string>
+    <string name="home_offline_mode_empty_state">Offline mode is on. Route Log stays available, but feed, chat, profile, and posting features need the server.</string>
+    <string name="home_offline_feature_unavailable">This feature needs the server and is unavailable in offline mode.</string>
     <string name="admin_login_title">Admin Login</string>
     <string name="admin_login_subtitle">Restricted access for elevated accounts</string>
     <string name="admin_login_card_title">Sign in as admin</string>
@@ -70,6 +76,7 @@
     <string name="admin_dashboard_recent_belayer_subtitle_format">%1$s | %2$s</string>
     <string name="route_log_title">Route Logbook</string>
     <string name="route_log_subtitle">Track sends, attempts, and recent climbing history.</string>
+    <string name="route_log_offline_banner">Offline mode: this logbook is stored on this device until you reconnect.</string>
     <string name="route_log_total_routes_label">Routes</string>
     <string name="route_log_total_attempts_label">Attempts</string>
     <string name="route_log_total_routes_value">%1$d</string>
@@ -90,9 +97,12 @@
     <string name="route_log_attempts_required">Attempts are required</string>
     <string name="route_log_attempts_invalid">Enter a valid attempt count above 0</string>
     <string name="route_log_saved_toast">Route added to your logbook</string>
+    <string name="route_log_saved_offline_toast">Route saved locally while offline</string>
     <string name="route_log_save_failed">Failed to save route entry: %1$s</string>
+    <string name="route_log_offline_save_fallback">Could not sync right now, so the route was saved locally instead.</string>
     <string name="route_log_profile_load_failed">Failed to load your profile: %1$s</string>
     <string name="route_log_load_failed">Failed to load route history: %1$s</string>
+    <string name="route_log_offline_history_fallback">Showing locally stored route history.</string>
     <string name="route_log_grade_unknown">Unspecified</string>
     <string name="route_log_default_status">Sent</string>
     <string name="route_log_default_author_name">Climber</string>

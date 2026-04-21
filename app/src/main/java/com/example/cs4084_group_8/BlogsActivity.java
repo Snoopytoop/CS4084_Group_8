@@ -119,6 +119,11 @@ public class BlogsActivity extends AppCompatActivity {
     }
 
     private void publishBlog() {
+        if (isServerAccessBlocked()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         clearErrors();
 
         String title = BlogValidation.normalizeTitle(valueOf(etBlogTitle));
@@ -160,6 +165,12 @@ public class BlogsActivity extends AppCompatActivity {
                     data.put("title", title);
                     data.put("body", body);
                     data.put("createdAt", FieldValue.serverTimestamp());
+
+                    if (isServerAccessBlocked()) {
+                        setPublishing(false);
+                        Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
                     firestore.collection(FirestoreCollections.BLOGS)
                             .add(data)
@@ -289,5 +300,9 @@ public class BlogsActivity extends AppCompatActivity {
             return "";
         }
         return input.getText().toString().trim();
+    }
+
+    private boolean isServerAccessBlocked() {
+        return OfflineSessionManager.isOfflineModeEnabled(this) || !NetworkStatus.isOnline(this);
     }
 }
