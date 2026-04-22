@@ -15,6 +15,11 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    function conversationIdHasCurrentUser(conversationId) {
+      return signedIn()
+          && conversationId.matches('(^|_)' + request.auth.uid + '(_|$)');
+    }
+
     function onlyFieldsChanged(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
@@ -142,12 +147,17 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if signedIn()
-            && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+            && (
+              (resource.data.participants is list && request.auth.uid in resource.data.participants)
+              || conversationIdHasCurrentUser(conversationId)
+            );
 
         allow create: if signedIn()
             && request.auth.uid in getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
             && request.resource.data.senderUid == request.auth.uid
-            && request.resource.data.text.size() > 0;
+            && request.resource.data.text.size() > 0
+            && request.resource.data.participants is list
+            && request.auth.uid in request.resource.data.participants;
 
         allow update, delete: if admin();
       }

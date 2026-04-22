@@ -257,6 +257,7 @@ public class ChatActivity extends AppCompatActivity {
         messageData.put("senderName", senderName);
         messageData.put("text", messageText);
         messageData.put("createdAt", FieldValue.serverTimestamp());
+        messageData.put("participants", ConversationThreadIds.buildParticipants(currentUser.getUid(), otherUserId));
 
         WriteBatch batch = firestore.batch();
         batch.set(conversationRef, conversationData, SetOptions.merge());
