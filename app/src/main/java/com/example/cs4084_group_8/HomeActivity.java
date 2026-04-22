@@ -141,7 +141,17 @@ public class HomeActivity extends AppCompatActivity {
             return;
         }
 
-        probeFirebaseServerAndRender(user);
+        // Check local network first; if available, assume online immediately
+        if (NetworkStatus.isOnline(this)) {
+            firebaseServerReachable = true;
+            applyOnlineState(user);
+            // Verify Firebase in background; only revert if probe fails
+            verifyFirebaseServerInitial(user);
+        } else {
+            // No local network, definitely offline
+            firebaseServerReachable = false;
+            applyOfflineState();
+        }
     }
 
     @Override
@@ -295,7 +305,8 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void openServerFeature(Class<?> activityClass) {
-        if (!firebaseServerReachable) {
+        // Check connectivity fresh every time - don't rely on stale flag
+        if (!NetworkStatus.isOnline(this)) {
             Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -389,16 +400,16 @@ public class HomeActivity extends AppCompatActivity {
         }
 
         if (!NetworkStatus.isOnline(this)) {
-            applyOfflineState();
             Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Instant reconnect UX: show online UI immediately, then verify against Firebase server.
+        // Optimistic: set online immediately when local network available, then verify Firebase
         firebaseServerReachable = true;
         applyOnlineState(user);
         Toast.makeText(this, R.string.home_retry_online_success, Toast.LENGTH_SHORT).show();
-
+        
+        // Verify Firebase in background; only revert if probe fails
         verifyFirebaseServerAfterRetry(user);
     }
 
@@ -423,7 +434,7 @@ public class HomeActivity extends AppCompatActivity {
                 });
     }
 
-    private void probeFirebaseServerAndRender(FirebaseUser user) {
+    private void verifyFirebaseServerInitial(FirebaseUser user) {
         if (firebaseProbeInProgress) {
             return;
         }
@@ -435,22 +446,46 @@ public class HomeActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshot -> {
                     firebaseProbeInProgress = false;
                     firebaseServerReachable = true;
-                    applyOnlineState(user);
                 })
                 .addOnFailureListener(e -> {
                     firebaseProbeInProgress = false;
                     firebaseServerReachable = false;
                     applyOfflineState();
-                    Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
                 });
     }
 
     private void applyOnlineState(FirebaseUser user) {
         hideOfflineIndicators();
         loadNavProfileImage(user.getUid(), ivNavProfile);
-        listenForPosts();
         enableOnlineUi();
         rvPosts.setVisibility(View.VISIBLE);
+        
+        // Load fresh server data first to avoid showing stale cache
+        postAdapter.submitList(new ArrayList<>());
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        tvEmptyFeed.setText(R.string.home_loading_posts);
+        
+        firestore.collection("posts")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .get(Source.SERVER)
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Post> posts = new ArrayList<>();
+                    querySnapshot.getDocuments().forEach(documentSnapshot -> {
+                        Post post = documentSnapshot.toObject(Post.class);
+                        if (post != null) {
+                            post.setId(documentSnapshot.getId());
+                            posts.add(post);
+                        }
+                    });
+                    postAdapter.submitList(posts);
+                    tvEmptyFeed.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
+                    // Now set up real-time listener for updates
+                    listenForPosts();
+                })
+                .addOnFailureListener(e -> {
+                    // Fall back to listener even if server load fails
+                    listenForPosts();
+                });
     }
 
     private void applyOfflineState() {
@@ -458,6 +493,7 @@ public class HomeActivity extends AppCompatActivity {
             postsListener.remove();
             postsListener = null;
         }
+        firebaseServerReachable = false;
         postAdapter.submitList(new ArrayList<>());
         ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
         tvEmptyFeed.setVisibility(View.VISIBLE);

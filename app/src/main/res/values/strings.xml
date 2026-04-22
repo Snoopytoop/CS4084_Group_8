@@ -18,6 +18,7 @@
     <string name="home_retry_still_offline">Still offline. Check your connection and try again.</string>
     <string name="home_retry_online_success">Connection restored. Refreshing online features.</string>
     <string name="home_retry_already_online">You are already online.</string>
+    <string name="home_loading_posts">Loading posts...</string>
     <string name="admin_login_title">Admin Login</string>
     <string name="admin_login_subtitle">Restricted access for elevated accounts</string>
     <string name="admin_login_card_title">Sign in as admin</string>
