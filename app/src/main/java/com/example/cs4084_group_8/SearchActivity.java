@@ -45,6 +45,11 @@ public class SearchActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
 
+        if (!ServerFeatureGate.ensureServerFeatureAvailable(this)) {
+            finish();
+            return;
+        }
+
         firestore = FirebaseFirestore.getInstance();
 
         etSearch = findViewById(R.id.etSearch);

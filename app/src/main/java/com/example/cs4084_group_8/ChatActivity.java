@@ -208,6 +208,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendMessage() {
+        if (!ServerFeatureGate.canUseMessaging(this)) {
+            return;
+        }
+
         tilChatMessage.setError(null);
 
         String messageText = valueOf(etChatMessage);

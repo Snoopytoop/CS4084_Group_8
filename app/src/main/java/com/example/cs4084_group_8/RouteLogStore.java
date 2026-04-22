@@ -78,6 +78,41 @@ public final class RouteLogStore {
         return true;
     }
 
+    public static List<RouteLogEntry> loadPendingEntries(Context context, String ownerId) {
+        List<RouteLogEntry> pendingEntries = new ArrayList<>();
+        for (RouteLogEntry entry : loadEntries(context, ownerId)) {
+            if (entry.isPendingSync()) {
+                pendingEntries.add(entry);
+            }
+        }
+        return pendingEntries;
+    }
+
+    public static void markEntrySynced(Context context, String ownerId, String entryId) {
+        if (TextUtils.isEmpty(ownerId) || TextUtils.isEmpty(entryId)) {
+            return;
+        }
+
+        JSONArray storedEntries = readArray(context, ownerKey(ownerId));
+        for (int index = 0; index < storedEntries.length(); index++) {
+            JSONObject object = storedEntries.optJSONObject(index);
+            if (object == null) {
+                continue;
+            }
+            if (entryId.equals(object.optString("id", null))) {
+                try {
+                    object.put("pendingSync", false);
+                    object.put("syncedToServer", true);
+                    storedEntries.put(index, object);
+                } catch (JSONException ignored) {
+                    // Value types are controlled by this class.
+                }
+                writeArray(context, ownerKey(ownerId), storedEntries);
+                return;
+            }
+        }
+    }
+
     public static RouteLogEntry createEntry(
             String authorUid,
             String authorName,
@@ -98,6 +133,8 @@ public final class RouteLogStore {
         entry.setNotes(notes);
         entry.setLoggedAtMillis(System.currentTimeMillis());
         entry.setLoggedAt(new Timestamp(new Date(entry.getLoggedAtMillis())));
+        entry.setPendingSync(true);
+        entry.setSyncedToServer(false);
         return entry;
     }
 
@@ -116,6 +153,8 @@ public final class RouteLogStore {
             entry.setLoggedAtMillis(loggedAtMillis);
             entry.setLoggedAt(new Timestamp(new Date(loggedAtMillis)));
         }
+        entry.setPendingSync(object.optBoolean("pendingSync", false));
+        entry.setSyncedToServer(object.optBoolean("syncedToServer", false));
         return entry;
     }
 
@@ -131,6 +170,8 @@ public final class RouteLogStore {
             object.put("sendStatus", entry.getSendStatus());
             object.put("notes", entry.getNotes());
             object.put("loggedAtMillis", entry.getSortTimestampMillis());
+            object.put("pendingSync", entry.isPendingSync());
+            object.put("syncedToServer", entry.isSyncedToServer());
         } catch (JSONException ignored) {
             // Stored values are already validated before they reach this point.
         }

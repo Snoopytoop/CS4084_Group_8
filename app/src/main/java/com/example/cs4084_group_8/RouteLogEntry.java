@@ -13,6 +13,8 @@ public class RouteLogEntry {
     private String notes;
     private Timestamp loggedAt;
     private Long loggedAtMillis;
+    private boolean pendingSync;
+    private boolean syncedToServer;
 
     public RouteLogEntry() {
         // Needed for Firestore deserialization.
@@ -109,5 +111,21 @@ public class RouteLogEntry {
             return loggedAt.toDate().getTime();
         }
         return loggedAtMillis == null ? 0L : loggedAtMillis;
+    }
+
+    public boolean isPendingSync() {
+        return pendingSync;
+    }
+
+    public void setPendingSync(boolean pendingSync) {
+        this.pendingSync = pendingSync;
+    }
+
+    public boolean isSyncedToServer() {
+        return syncedToServer;
+    }
+
+    public void setSyncedToServer(boolean syncedToServer) {
+        this.syncedToServer = syncedToServer;
     }
 }

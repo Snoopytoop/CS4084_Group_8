@@ -442,6 +442,6 @@ public class FindBelayerActivity extends AppCompatActivity {
     }
 
     private boolean isServerAccessBlocked() {
-        return OfflineSessionManager.isOfflineModeEnabled(this) || !NetworkStatus.isOnline(this);
+        return ServerFeatureGate.isServerFeatureBlocked(this);
     }
 }

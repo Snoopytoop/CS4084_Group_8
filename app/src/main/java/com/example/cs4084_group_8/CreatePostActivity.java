@@ -286,6 +286,6 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private boolean isServerAccessBlocked() {
-        return OfflineSessionManager.isOfflineModeEnabled(this) || !NetworkStatus.isOnline(this);
+        return ServerFeatureGate.isServerFeatureBlocked(this);
     }
 }

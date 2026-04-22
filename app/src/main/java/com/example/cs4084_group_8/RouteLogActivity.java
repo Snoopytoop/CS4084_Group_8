@@ -94,6 +94,15 @@ public class RouteLogActivity extends AppCompatActivity {
         }
 
         updateOfflineBanner();
+
+        if (!sessionIdentity.isOffline() && currentUser != null && NetworkStatus.isOnline(this)) {
+            RouteLogSyncManager.syncPendingEntries(this, firestore, currentUser, (uploadedCount, failedCount) -> {
+                if (uploadedCount > 0) {
+                    Toast.makeText(this, getString(R.string.route_log_synced_count_toast, uploadedCount), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
         listenForRouteHistory();
     }
 
@@ -385,6 +394,8 @@ public class RouteLogActivity extends AppCompatActivity {
     }
 
     private void saveRouteEntryLocally(RouteLogEntry entry, boolean showOfflineToast) {
+        entry.setPendingSync(true);
+        entry.setSyncedToServer(false);
         RouteLogStore.saveEntry(this, entry);
         btnSaveRouteEntry.setEnabled(true);
         clearQuickEntryFields();
