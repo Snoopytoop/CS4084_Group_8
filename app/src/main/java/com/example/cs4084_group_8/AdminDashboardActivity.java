@@ -466,6 +466,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void signOut() {
+        OfflineSessionManager.disableOfflineMode(this);
         firebaseAuth.signOut();
         returnToSignIn();
     }

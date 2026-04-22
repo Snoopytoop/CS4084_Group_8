@@ -406,6 +406,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 return true;
             }
             if (item.getItemId() == MENU_LOGOUT_ID) {
+                OfflineSessionManager.disableOfflineMode(this);
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(this, MainActivity.class));
                 finish();

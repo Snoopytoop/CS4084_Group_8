@@ -3,6 +3,7 @@ package com.example.cs4084_group_8;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
@@ -17,6 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
@@ -49,9 +51,12 @@ public class RouteLogActivity extends AppCompatActivity {
     private TextView tvAverageAttemptsValue;
     private TextView tvRouteHistoryEmpty;
     private RecyclerView rvRouteHistory;
+    private View cardOfflineModeBanner;
+    private TextView tvOfflineModeBanner;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
+    private OfflineSessionManager.SessionIdentity sessionIdentity;
     private RouteLogAdapter routeLogAdapter;
     private ListenerRegistration routeHistoryListener;
 
@@ -62,7 +67,8 @@ public class RouteLogActivity extends AppCompatActivity {
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
+        sessionIdentity = OfflineSessionManager.resolveSessionIdentity(this, currentUser);
+        if (sessionIdentity == null) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
             return;
@@ -80,10 +86,21 @@ public class RouteLogActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
+        sessionIdentity = OfflineSessionManager.resolveSessionIdentity(this, currentUser);
+        if (sessionIdentity == null) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
             return;
+        }
+
+        updateOfflineBanner();
+
+        if (!sessionIdentity.isOffline() && currentUser != null && NetworkStatus.isOnline(this)) {
+            RouteLogSyncManager.syncPendingEntries(this, firestore, currentUser, (uploadedCount, failedCount) -> {
+                if (uploadedCount > 0) {
+                    Toast.makeText(this, getString(R.string.route_log_synced_count_toast, uploadedCount), Toast.LENGTH_SHORT).show();
+                }
+            });
         }
 
         listenForRouteHistory();
@@ -117,6 +134,8 @@ public class RouteLogActivity extends AppCompatActivity {
         tvAverageAttemptsValue = findViewById(R.id.tvAverageAttemptsValue);
         tvRouteHistoryEmpty = findViewById(R.id.tvRouteHistoryEmpty);
         rvRouteHistory = findViewById(R.id.rvRouteHistory);
+        cardOfflineModeBanner = findViewById(R.id.cardOfflineModeBanner);
+        tvOfflineModeBanner = findViewById(R.id.tvOfflineModeBanner);
     }
 
     private void configureToolbar() {
@@ -189,49 +208,58 @@ public class RouteLogActivity extends AppCompatActivity {
         String finalGrade = grade;
         String finalSendStatus = sendStatus;
         long finalAttempts = attempts;
-        firestore.collection(FirestoreCollections.USERS)
-                .document(currentUser.getUid())
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    String authorName = snapshot.getString("username");
-                    if (TextUtils.isEmpty(authorName)) {
-                        authorName = currentUser.getDisplayName();
-                    }
-                    if (TextUtils.isEmpty(authorName)) {
-                        authorName = getString(R.string.route_log_default_author_name);
-                    }
+        String authorUid = sessionIdentity.getUid();
+        String authorName = sessionIdentity.getDisplayName();
+        if (TextUtils.isEmpty(authorName)) {
+            authorName = getString(R.string.route_log_default_author_name);
+        }
 
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("authorUid", currentUser.getUid());
-                    data.put("authorName", authorName);
-                    data.put("routeName", routeName);
-                    data.put("grade", finalGrade);
-                    data.put("attempts", finalAttempts);
-                    data.put("sendStatus", finalSendStatus);
-                    data.put("notes", notes);
-                    data.put("loggedAt", FieldValue.serverTimestamp());
+        RouteLogEntry entry = RouteLogStore.createEntry(
+                authorUid,
+                authorName,
+                routeName,
+                finalGrade,
+                finalAttempts,
+                finalSendStatus,
+                notes
+        );
 
-                    firestore.collection(FirestoreCollections.ROUTE_LOGS)
-                            .add(data)
-                            .addOnSuccessListener(documentReference -> {
-                                btnSaveRouteEntry.setEnabled(true);
-                                clearQuickEntryFields();
-                                Toast.makeText(this, R.string.route_log_saved_toast, Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                btnSaveRouteEntry.setEnabled(true);
-                                Toast.makeText(this, getString(R.string.route_log_save_failed, e.getMessage()), Toast.LENGTH_LONG).show();
-                            });
+        if (sessionIdentity.isOffline()) {
+            saveRouteEntryLocally(entry, true);
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("authorUid", entry.getAuthorUid());
+        data.put("authorName", entry.getAuthorName());
+        data.put("routeName", entry.getRouteName());
+        data.put("grade", entry.getGrade());
+        data.put("attempts", entry.getAttempts());
+        data.put("sendStatus", entry.getSendStatus());
+        data.put("notes", entry.getNotes());
+        data.put("loggedAt", FieldValue.serverTimestamp());
+
+        firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                .add(data)
+                .addOnSuccessListener(documentReference -> {
+                    btnSaveRouteEntry.setEnabled(true);
+                    clearQuickEntryFields();
+                    Toast.makeText(this, R.string.route_log_saved_toast, Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    btnSaveRouteEntry.setEnabled(true);
-                    Toast.makeText(this, getString(R.string.route_log_profile_load_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                    saveRouteEntryLocally(entry, false);
+                    Toast.makeText(this, R.string.route_log_offline_save_fallback, Toast.LENGTH_LONG).show();
                 });
     }
 
     private void listenForRouteHistory() {
         if (routeHistoryListener != null) {
             routeHistoryListener.remove();
+        }
+
+        if (sessionIdentity.isOffline()) {
+            loadLocalRouteHistory();
+            return;
         }
 
         tvRouteHistoryEmpty.setVisibility(TextView.VISIBLE);
@@ -242,9 +270,7 @@ public class RouteLogActivity extends AppCompatActivity {
                 .whereEqualTo("authorUid", currentUser.getUid())
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
-                        rvRouteHistory.setVisibility(RecyclerView.GONE);
-                        tvRouteHistoryEmpty.setVisibility(TextView.VISIBLE);
-                        tvRouteHistoryEmpty.setText(getString(R.string.route_log_load_failed, error.getMessage()));
+                        loadLocalRouteHistory();
                         return;
                     }
 
@@ -260,8 +286,7 @@ public class RouteLogActivity extends AppCompatActivity {
                     }
 
                     entries.sort(Comparator.comparing(
-                            RouteLogEntry::getLoggedAt,
-                            Comparator.nullsLast(Comparator.naturalOrder())
+                RouteLogEntry::getSortTimestampMillis
                     ).reversed());
 
                     routeLogAdapter.submitEntries(entries);
@@ -274,6 +299,21 @@ public class RouteLogActivity extends AppCompatActivity {
                         tvRouteHistoryEmpty.setText(R.string.route_log_empty_history);
                     }
                 });
+    }
+
+    private void loadLocalRouteHistory() {
+        List<RouteLogEntry> entries = RouteLogStore.loadEntries(this, sessionIdentity.getUid());
+        routeLogAdapter.submitEntries(entries);
+        updateSummary(entries);
+
+        boolean hasEntries = !entries.isEmpty();
+        rvRouteHistory.setVisibility(hasEntries ? RecyclerView.VISIBLE : RecyclerView.GONE);
+        tvRouteHistoryEmpty.setVisibility(hasEntries ? TextView.GONE : TextView.VISIBLE);
+        if (!hasEntries) {
+            tvRouteHistoryEmpty.setText(R.string.route_log_empty_history);
+        } else {
+            tvRouteHistoryEmpty.setText(R.string.route_log_offline_history_fallback);
+        }
     }
 
     private void updateSummary(List<RouteLogEntry> entries) {
@@ -295,7 +335,7 @@ public class RouteLogActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.route_log_delete_missing_id, Toast.LENGTH_SHORT).show();
             return;
         }
-        if (currentUser == null || !TextUtils.equals(currentUser.getUid(), entry.getAuthorUid())) {
+        if (!TextUtils.equals(sessionIdentity.getUid(), entry.getAuthorUid())) {
             Toast.makeText(this, R.string.route_log_delete_not_owner, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -309,15 +349,32 @@ public class RouteLogActivity extends AppCompatActivity {
     }
 
     private void deleteEntry(String entryId) {
+        if (sessionIdentity.isOffline()) {
+            boolean deleted = RouteLogStore.deleteEntry(this, sessionIdentity.getUid(), entryId);
+            if (deleted) {
+                loadLocalRouteHistory();
+                Toast.makeText(this, R.string.route_log_delete_success, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.route_log_delete_failed, "local storage"), Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+
         firestore.collection(FirestoreCollections.ROUTE_LOGS)
                 .document(entryId)
                 .delete()
                 .addOnSuccessListener(unused ->
                         Toast.makeText(this, R.string.route_log_delete_success, Toast.LENGTH_SHORT).show()
                 )
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, getString(R.string.route_log_delete_failed, e.getMessage()), Toast.LENGTH_LONG).show()
-                );
+                .addOnFailureListener(e -> {
+                    boolean deleted = RouteLogStore.deleteEntry(this, sessionIdentity.getUid(), entryId);
+                    if (deleted) {
+                        loadLocalRouteHistory();
+                        Toast.makeText(this, R.string.route_log_delete_success, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, getString(R.string.route_log_delete_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private void clearInputErrors() {
@@ -334,6 +391,30 @@ public class RouteLogActivity extends AppCompatActivity {
         etRouteAttempts.setText("");
         etRouteNotes.setText("");
         actvRouteStatus.setText(getString(R.string.route_log_default_status), false);
+    }
+
+    private void saveRouteEntryLocally(RouteLogEntry entry, boolean showOfflineToast) {
+        entry.setPendingSync(true);
+        entry.setSyncedToServer(false);
+        RouteLogStore.saveEntry(this, entry);
+        btnSaveRouteEntry.setEnabled(true);
+        clearQuickEntryFields();
+        loadLocalRouteHistory();
+        if (showOfflineToast) {
+            Toast.makeText(this, R.string.route_log_saved_offline_toast, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateOfflineBanner() {
+        if (cardOfflineModeBanner == null || tvOfflineModeBanner == null) {
+            return;
+        }
+
+        boolean offline = sessionIdentity != null && sessionIdentity.isOffline();
+        cardOfflineModeBanner.setVisibility(offline ? View.VISIBLE : View.GONE);
+        if (offline) {
+            tvOfflineModeBanner.setText(R.string.route_log_offline_banner);
+        }
     }
 
     private String valueOf(TextView view) {

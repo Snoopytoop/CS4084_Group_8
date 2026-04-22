@@ -58,6 +58,11 @@ public class LeaderboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_leaderboard);
 
+        if (!ServerFeatureGate.ensureServerFeatureAvailable(this)) {
+            finish();
+            return;
+        }
+
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 

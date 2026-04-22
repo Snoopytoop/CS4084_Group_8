@@ -61,6 +61,23 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
         holder.tvBody.setText(message.getText());
         holder.tvTime.setText(formatTimestamp(message.getCreatedAt()));
 
+        if (outgoing) {
+            holder.tvDeliveryState.setVisibility(View.VISIBLE);
+            if (message.isPendingWrite()) {
+                holder.tvDeliveryState.setText(holder.itemView.getContext().getString(R.string.chat_message_status_pending));
+                holder.tvDeliveryState.setTextColor(
+                        ContextCompat.getColor(holder.itemView.getContext(), R.color.route_log_text_secondary)
+                );
+            } else {
+                holder.tvDeliveryState.setText(holder.itemView.getContext().getString(R.string.chat_message_status_sent_ticks));
+                holder.tvDeliveryState.setTextColor(
+                        ContextCompat.getColor(holder.itemView.getContext(), R.color.chat_tick_blue)
+                );
+            }
+        } else {
+            holder.tvDeliveryState.setVisibility(View.GONE);
+        }
+
         int cardColor = outgoing
                 ? ContextCompat.getColor(holder.itemView.getContext(), R.color.route_log_accent)
                 : ContextCompat.getColor(holder.itemView.getContext(), R.color.route_log_card_bg);
@@ -94,6 +111,7 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
         private final MaterialCardView messageCard;
         private final TextView tvBody;
         private final TextView tvTime;
+        private final TextView tvDeliveryState;
 
         DirectMessageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -102,6 +120,7 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
             messageCard = itemView.findViewById(R.id.messageCard);
             tvBody = itemView.findViewById(R.id.tvMessageBody);
             tvTime = itemView.findViewById(R.id.tvMessageTime);
+            tvDeliveryState = itemView.findViewById(R.id.tvMessageDeliveryState);
         }
     }
 }

@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText etPassword;
     private MaterialButton btnRegister;
     private MaterialButton btnAdminLogin;
+    private MaterialButton btnOfflineMode;
     private TextView tvTitle;
     private TextView tvSwitchMode;
 
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
         btnAdminLogin.setOnClickListener(v -> startActivity(new Intent(this, AdminLoginActivity.class)));
+        btnOfflineMode.setOnClickListener(v -> startOfflineMode());
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -68,7 +70,10 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user != null) {
+            OfflineSessionManager.disableOfflineMode(this);
             handleExistingSignedInUser(user);
+        } else if (OfflineSessionManager.isOfflineModeEnabled(this)) {
+            navigateToHome();
         }
     }
 
@@ -81,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
         btnAdminLogin = findViewById(R.id.btnAdminLogin);
+        btnOfflineMode = findViewById(R.id.btnOfflineMode);
         tvTitle = findViewById(R.id.tvTitle);
         tvSwitchMode = findViewById(R.id.tvSwitchMode);
     }
@@ -144,6 +150,8 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
 
+                        OfflineSessionManager.disableOfflineMode(this);
+
                         UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                                 .setDisplayName(username)
                                 .build();
@@ -194,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(this, "Login failed. Please try again.", Toast.LENGTH_LONG).show();
                             return;
                         }
+                        OfflineSessionManager.disableOfflineMode(this);
                         validateAndRouteMemberLogin(currentUser, email);
                     } else {
                         Log.e(TAG, "Auth login failed", task.getException());
@@ -299,6 +308,7 @@ public class MainActivity extends AppCompatActivity {
     private void setLoading(boolean isLoading) {
         btnRegister.setEnabled(!isLoading);
         btnAdminLogin.setEnabled(!isLoading);
+        btnOfflineMode.setEnabled(!isLoading);
         tvSwitchMode.setEnabled(!isLoading);
         // You might want to add a ProgressBar here in your layout
     }
@@ -340,5 +350,11 @@ public class MainActivity extends AppCompatActivity {
     private void navigateToAdminDashboard() {
         startActivity(new Intent(this, AdminDashboardActivity.class));
         finish();
+    }
+
+    private void startOfflineMode() {
+        OfflineSessionManager.enableOfflineMode(this);
+        Toast.makeText(this, R.string.main_offline_mode_started, Toast.LENGTH_SHORT).show();
+        navigateToHome();
     }
 }

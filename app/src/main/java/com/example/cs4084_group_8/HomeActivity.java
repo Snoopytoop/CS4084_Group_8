@@ -3,6 +3,8 @@ package com.example.cs4084_group_8;
 import android.content.Intent;
 import android.text.InputType;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +32,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,18 +42,27 @@ import java.util.Map;
 public class HomeActivity extends AppCompatActivity {
     private static final String PROFILE_CACHE_PREF = "profile_cache";
     private static final String PROFILE_IMAGE_URL_PREFIX = "profile_image_url_";
+    private static final long FIREBASE_PROBE_TIMEOUT_MS = 12000L;
 
     private ShapeableImageView ivNavProfile;
     private ImageButton btnNavCreatePost;
+    private ImageButton btnNavSearch;
+    private ImageButton btnNavLeaderboard;
     private MaterialButton btnQuickRouteLog;
     private MaterialButton btnQuickMessages;
     private MaterialButton btnQuickFindBelayer;
     private MaterialButton btnQuickBlogs;
+    private MaterialButton btnRetryConnection;
     private RecyclerView rvPosts;
     private TextView tvEmptyFeed;
+    private TextView tvOfflineChip;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
+    private boolean firebaseServerReachable;
+    private boolean firebaseProbeInProgress;
+    private final Handler probeTimeoutHandler = new Handler(Looper.getMainLooper());
+    private Runnable activeProbeTimeoutRunnable;
     private PostAdapter postAdapter;
     private ListenerRegistration postsListener;
 
@@ -60,16 +72,18 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
-        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        btnNavSearch = findViewById(R.id.btnNavSearch);
+        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         btnQuickRouteLog = findViewById(R.id.btnQuickRouteLog);
         btnQuickMessages = findViewById(R.id.btnQuickMessages);
         btnQuickFindBelayer = findViewById(R.id.btnQuickFindBelayer);
         btnQuickBlogs = findViewById(R.id.btnQuickBlogs);
+        btnRetryConnection = findViewById(R.id.btnRetryConnection);
         rvPosts = findViewById(R.id.rvPosts);
         tvEmptyFeed = findViewById(R.id.tvEmptyFeed);
+        tvOfflineChip = findViewById(R.id.tvOfflineChip);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -94,26 +108,15 @@ public class HomeActivity extends AppCompatActivity {
         btnNavHome.setOnClickListener(v -> {
             // Already on home.
         });
-        btnNavSearch.setOnClickListener(v -> {
-            startActivity(new Intent(this, SearchActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        ivNavProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
-            overridePendingTransition(0, 0);
-        });
-        btnNavCreatePost.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreatePostActivity.class));
-            overridePendingTransition(0, 0);
-        });
+        btnNavSearch.setOnClickListener(v -> openServerFeature(SearchActivity.class));
+        btnNavLeaderboard.setOnClickListener(v -> openServerFeature(LeaderboardActivity.class));
+        ivNavProfile.setOnClickListener(v -> openServerFeature(UserProfileActivity.class));
+        btnNavCreatePost.setOnClickListener(v -> openServerFeature(CreatePostActivity.class));
         btnQuickRouteLog.setOnClickListener(v -> startActivity(new Intent(this, RouteLogActivity.class)));
-        btnQuickMessages.setOnClickListener(v -> startActivity(new Intent(this, InboxActivity.class)));
-        btnQuickFindBelayer.setOnClickListener(v -> startActivity(new Intent(this, FindBelayerActivity.class)));
-        btnQuickBlogs.setOnClickListener(v -> startActivity(new Intent(this, BlogsActivity.class)));
+        btnQuickMessages.setOnClickListener(v -> openMessagesFeature());
+        btnQuickFindBelayer.setOnClickListener(v -> openServerFeature(FindBelayerActivity.class));
+        btnQuickBlogs.setOnClickListener(v -> openServerFeature(BlogsActivity.class));
+        btnRetryConnection.setOnClickListener(v -> retryOnlineConnection());
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);
@@ -131,19 +134,34 @@ public class HomeActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         currentUser = user;
-        if (user != null) {
-            loadNavProfileImage(user.getUid(), ivNavProfile);
-            listenForPosts();
+        hideOfflineIndicators();
+
+        if (isForcedOfflineSession()) {
+            applyOfflineState();
+            return;
+        }
+
+        if (user == null) {
+            applyLoggedOutState();
+            return;
+        }
+
+        // Start in a blocked/checking state and only enable server features after probe success.
+        applyConnectionCheckingState();
+
+        if (NetworkStatus.isOnline(this)) {
+            verifyFirebaseServerInitial(user);
         } else {
-            ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
-            tvEmptyFeed.setText("Please log in to view and create posts.");
-            tvEmptyFeed.setVisibility(View.VISIBLE);
+            // No local network, definitely offline.
+            firebaseServerReachable = false;
+            applyOfflineState();
         }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        clearProbeTimeout();
         if (postsListener != null) {
             postsListener.remove();
             postsListener = null;
@@ -291,6 +309,73 @@ public class HomeActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void openServerFeature(Class<?> activityClass) {
+        if (!isServerFeatureReady()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        startActivity(new Intent(this, activityClass));
+        overridePendingTransition(0, 0);
+    }
+
+    private void openMessagesFeature() {
+        if (!ServerFeatureGate.canUseMessaging(this)) {
+            return;
+        }
+        startActivity(new Intent(this, InboxActivity.class));
+        overridePendingTransition(0, 0);
+    }
+
+    private void enableOfflineUi() {
+        setBlockedUiState(btnNavSearch);
+        setBlockedUiState(btnNavLeaderboard);
+        setBlockedUiState(btnNavCreatePost);
+        setBlockedUiState(btnQuickFindBelayer);
+        setBlockedUiState(btnQuickBlogs);
+        setBlockedUiState(ivNavProfile);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            setDisabledUiState(btnQuickMessages);
+        } else {
+            setEnabledUiState(btnQuickMessages);
+        }
+    }
+
+    private void enableOnlineUi() {
+        setEnabledUiState(btnNavSearch);
+        setEnabledUiState(btnNavLeaderboard);
+        setEnabledUiState(btnNavCreatePost);
+        setEnabledUiState(btnQuickMessages);
+        setEnabledUiState(btnQuickFindBelayer);
+        setEnabledUiState(btnQuickBlogs);
+        setEnabledUiState(ivNavProfile);
+    }
+
+    private void setBlockedUiState(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setEnabled(true);
+        view.setAlpha(0.4f);
+    }
+
+    private void setDisabledUiState(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setEnabled(false);
+        view.setAlpha(0.4f);
+    }
+
+    private void setEnabledUiState(View view) {
+        if (view == null) {
+            return;
+        }
+        view.setEnabled(true);
+        view.setAlpha(1f);
+    }
+
     private void loadNavProfileImage(String uid, ImageView targetView) {
         String cachedUrl = getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
                 .getString(PROFILE_IMAGE_URL_PREFIX + uid, null);
@@ -323,5 +408,227 @@ public class HomeActivity extends AppCompatActivity {
                 .placeholder(android.R.drawable.ic_menu_camera)
                 .error(android.R.drawable.ic_menu_camera)
                 .into(targetView);
+    }
+
+    private void retryOnlineConnection() {
+        if (firebaseProbeInProgress) {
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        currentUser = user;
+
+        if (isForcedOfflineSession()) {
+            Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (user == null) {
+            Toast.makeText(this, R.string.home_retry_already_online, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!NetworkStatus.isOnline(this)) {
+            Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        btnRetryConnection.setEnabled(false);
+        btnRetryConnection.setText(R.string.home_retry_checking);
+        verifyFirebaseServerAfterRetry(user);
+    }
+
+    private void verifyFirebaseServerAfterRetry(FirebaseUser user) {
+        if (firebaseProbeInProgress) {
+            return;
+        }
+        firebaseProbeInProgress = true;
+        startProbeTimeout(true);
+
+        firestore.collection(FirestoreCollections.USERS)
+                .document(user.getUid())
+                .get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> {
+                    clearProbeTimeout();
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = true;
+                    btnRetryConnection.setEnabled(true);
+                    btnRetryConnection.setText(R.string.home_retry_connection);
+                    applyOnlineState(user);
+                    RouteLogSyncManager.syncPendingEntries(this, firestore, user, (uploadedCount, failedCount) -> {
+                        if (uploadedCount > 0) {
+                            Toast.makeText(this, getString(R.string.route_log_synced_count_toast, uploadedCount), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    Toast.makeText(this, R.string.home_retry_online_success, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    clearProbeTimeout();
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = false;
+                    btnRetryConnection.setEnabled(true);
+                    btnRetryConnection.setText(R.string.home_retry_connection);
+                    applyOfflineState();
+                    Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void verifyFirebaseServerInitial(FirebaseUser user) {
+        if (firebaseProbeInProgress) {
+            return;
+        }
+        firebaseProbeInProgress = true;
+        startProbeTimeout(false);
+
+        firestore.collection(FirestoreCollections.USERS)
+                .document(user.getUid())
+                .get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> {
+                    clearProbeTimeout();
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = true;
+                    applyOnlineState(user);
+                    RouteLogSyncManager.syncPendingEntries(this, firestore, user, null);
+                })
+                .addOnFailureListener(e -> {
+                    clearProbeTimeout();
+                    firebaseProbeInProgress = false;
+                    firebaseServerReachable = false;
+                    applyOfflineState();
+                });
+    }
+
+    private void startProbeTimeout(boolean fromRetryButton) {
+        clearProbeTimeout();
+        activeProbeTimeoutRunnable = () -> {
+            if (!firebaseProbeInProgress || isFinishing() || isDestroyed()) {
+                return;
+            }
+
+            firebaseProbeInProgress = false;
+            firebaseServerReachable = false;
+            applyOfflineState();
+
+            if (fromRetryButton) {
+                Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            }
+        };
+        probeTimeoutHandler.postDelayed(activeProbeTimeoutRunnable, FIREBASE_PROBE_TIMEOUT_MS);
+    }
+
+    private void clearProbeTimeout() {
+        if (activeProbeTimeoutRunnable != null) {
+            probeTimeoutHandler.removeCallbacks(activeProbeTimeoutRunnable);
+            activeProbeTimeoutRunnable = null;
+        }
+    }
+
+    private void applyConnectionCheckingState() {
+        if (postsListener != null) {
+            postsListener.remove();
+            postsListener = null;
+        }
+
+        firebaseServerReachable = false;
+        postAdapter.submitList(new ArrayList<>());
+        ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        tvEmptyFeed.setText(R.string.home_checking_connection);
+        enableOfflineUi();
+        showOfflineIndicators();
+        btnRetryConnection.setEnabled(false);
+        btnRetryConnection.setText(R.string.home_retry_checking);
+        rvPosts.setVisibility(View.GONE);
+    }
+
+    private void applyOnlineState(FirebaseUser user) {
+        OfflineSessionManager.disableOfflineMode(this);
+        hideOfflineIndicators();
+        loadNavProfileImage(user.getUid(), ivNavProfile);
+        enableOnlineUi();
+        rvPosts.setVisibility(View.VISIBLE);
+        
+        // Load fresh server data first to avoid showing stale cache
+        postAdapter.submitList(new ArrayList<>());
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        tvEmptyFeed.setText(R.string.home_loading_posts);
+        
+        firestore.collection("posts")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .get(Source.SERVER)
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Post> posts = new ArrayList<>();
+                    querySnapshot.getDocuments().forEach(documentSnapshot -> {
+                        Post post = documentSnapshot.toObject(Post.class);
+                        if (post != null) {
+                            post.setId(documentSnapshot.getId());
+                            posts.add(post);
+                        }
+                    });
+                    postAdapter.submitList(posts);
+                    tvEmptyFeed.setVisibility(posts.isEmpty() ? View.VISIBLE : View.GONE);
+                    // Now set up real-time listener for updates
+                    listenForPosts();
+                })
+                .addOnFailureListener(e -> {
+                    // Fall back to listener even if server load fails
+                    listenForPosts();
+                });
+    }
+
+    private void applyOfflineState() {
+        if (postsListener != null) {
+            postsListener.remove();
+            postsListener = null;
+        }
+        firebaseServerReachable = false;
+        postAdapter.submitList(new ArrayList<>());
+        ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
+        enableOfflineUi();
+        showOfflineIndicators();
+        btnRetryConnection.setEnabled(true);
+        btnRetryConnection.setText(R.string.home_retry_connection);
+        rvPosts.setVisibility(View.GONE);
+    }
+
+    private void applyLoggedOutState() {
+        firebaseServerReachable = false;
+        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+        tvEmptyFeed.setText("Please log in to view and create posts.");
+        tvEmptyFeed.setVisibility(View.VISIBLE);
+        setDisabledUiState(btnNavSearch);
+        setDisabledUiState(btnNavLeaderboard);
+        setDisabledUiState(btnNavCreatePost);
+        setDisabledUiState(btnQuickMessages);
+        setDisabledUiState(btnQuickFindBelayer);
+        setDisabledUiState(btnQuickBlogs);
+        setDisabledUiState(ivNavProfile);
+        hideOfflineIndicators();
+        rvPosts.setVisibility(View.GONE);
+    }
+
+    private void hideOfflineIndicators() {
+        tvOfflineChip.setVisibility(View.GONE);
+        btnRetryConnection.setVisibility(View.GONE);
+    }
+
+    private void showOfflineIndicators() {
+        tvOfflineChip.setVisibility(View.VISIBLE);
+        tvOfflineChip.setText(R.string.home_offline_chip);
+        btnRetryConnection.setVisibility(View.VISIBLE);
+    }
+
+    private boolean isForcedOfflineSession() {
+        return OfflineSessionManager.isOfflineModeEnabled(this)
+                && FirebaseAuth.getInstance().getCurrentUser() == null;
+    }
+
+    private boolean isServerFeatureReady() {
+        return currentUser != null
+                && firebaseServerReachable
+                && NetworkStatus.isOnline(this)
+                && !isForcedOfflineSession();
     }
 }

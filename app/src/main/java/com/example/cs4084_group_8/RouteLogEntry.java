@@ -12,6 +12,9 @@ public class RouteLogEntry {
     private String sendStatus;
     private String notes;
     private Timestamp loggedAt;
+    private Long loggedAtMillis;
+    private boolean pendingSync;
+    private boolean syncedToServer;
 
     public RouteLogEntry() {
         // Needed for Firestore deserialization.
@@ -87,5 +90,42 @@ public class RouteLogEntry {
 
     public void setLoggedAt(Timestamp loggedAt) {
         this.loggedAt = loggedAt;
+        if (loggedAt != null) {
+            this.loggedAtMillis = loggedAt.toDate().getTime();
+        }
+    }
+
+    public Long getLoggedAtMillis() {
+        return loggedAtMillis;
+    }
+
+    public void setLoggedAtMillis(Long loggedAtMillis) {
+        this.loggedAtMillis = loggedAtMillis;
+        if (loggedAtMillis != null && loggedAt == null) {
+            this.loggedAt = new Timestamp(new java.util.Date(loggedAtMillis));
+        }
+    }
+
+    public long getSortTimestampMillis() {
+        if (loggedAt != null) {
+            return loggedAt.toDate().getTime();
+        }
+        return loggedAtMillis == null ? 0L : loggedAtMillis;
+    }
+
+    public boolean isPendingSync() {
+        return pendingSync;
+    }
+
+    public void setPendingSync(boolean pendingSync) {
+        this.pendingSync = pendingSync;
+    }
+
+    public boolean isSyncedToServer() {
+        return syncedToServer;
+    }
+
+    public void setSyncedToServer(boolean syncedToServer) {
+        this.syncedToServer = syncedToServer;
     }
 }

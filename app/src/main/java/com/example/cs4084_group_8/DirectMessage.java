@@ -8,6 +8,7 @@ public class DirectMessage {
     private String senderName;
     private String text;
     private Timestamp createdAt;
+    private boolean pendingWrite;
 
     public DirectMessage() {
         // Required for Firestore.
@@ -51,5 +52,13 @@ public class DirectMessage {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isPendingWrite() {
+        return pendingWrite;
+    }
+
+    public void setPendingWrite(boolean pendingWrite) {
+        this.pendingWrite = pendingWrite;
     }
 }

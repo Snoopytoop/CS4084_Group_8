@@ -10,4 +10,5 @@
     <color name="route_log_attempt_badge_bg">#3F2F18</color>
     <color name="route_log_attempt_badge_text">#FFCF82</color>
     <color name="route_log_accent">#FC8D4A</color>
+    <color name="chat_tick_blue">#3DA8FF</color>
 </resources>
