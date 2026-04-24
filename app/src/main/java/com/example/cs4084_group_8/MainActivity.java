@@ -26,6 +26,7 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityAuth";
+    private static final String FIELD_PROFILE_COMPLETED = "profileCompleted";
     private TextInputLayout tilEmail;
     private TextInputLayout tilUsername;
     private TextInputLayout tilPassword;
@@ -33,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText etUsername;
     private TextInputEditText etPassword;
     private MaterialButton btnRegister;
+    private MaterialButton btnAdminLogin;
+    private MaterialButton btnOfflineMode;
     private TextView tvTitle;
     private TextView tvSwitchMode;
 
@@ -48,9 +51,11 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
-        Log.d(TAG, "Firebase projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
+        Log.d(TAG, "Firebase initialized. projectId=" + FirebaseApp.getInstance().getOptions().getProjectId());
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
+        btnAdminLogin.setOnClickListener(v -> startActivity(new Intent(this, AdminLoginActivity.class)));
+        btnOfflineMode.setOnClickListener(v -> startOfflineMode());
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -63,10 +68,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user != null) {
-            String email = user.getEmail() != null ? user.getEmail() : "";
-            upsertUserProfileAndRoute(user, email, false);
+            OfflineSessionManager.disableOfflineMode(this);
+            handleExistingSignedInUser(user);
+        } else if (OfflineSessionManager.isOfflineModeEnabled(this)) {
+            navigateToHome();
         }
     }
 
@@ -78,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
         etUsername = findViewById(R.id.etUsername);
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
+        btnAdminLogin = findViewById(R.id.btnAdminLogin);
+        btnOfflineMode = findViewById(R.id.btnOfflineMode);
         tvTitle = findViewById(R.id.tvTitle);
         tvSwitchMode = findViewById(R.id.tvSwitchMode);
     }
@@ -129,72 +138,129 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void registerWithEmail(String email, String password, String username) {
+        Log.d(TAG, "Attempting registration for email: " + email);
         firebaseAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    if (!task.isSuccessful()) {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Auth registration successful for: " + email);
+                        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
+                        if (currentUser == null) {
+                            setLoading(false);
+                            Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
+                        OfflineSessionManager.disableOfflineMode(this);
+
+                        UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                .setDisplayName(username)
+                                .build();
+
+                        currentUser.updateProfile(profileUpdates)
+                                .addOnCompleteListener(profileTask -> {
+                                    Map<String, Object> userProfile = new HashMap<>();
+                                    userProfile.put("uid", currentUser.getUid());
+                                    userProfile.put("email", email);
+                                    userProfile.put("username", username);
+                                    userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
+                                    userProfile.put(FIELD_PROFILE_COMPLETED, false);
+                                    userProfile.put("createdAt", FieldValue.serverTimestamp());
+                                    userProfile.put("updatedAt", FieldValue.serverTimestamp());
+
+                                    firebaseFirestore.collection(FirestoreCollections.USERS)
+                                            .document(currentUser.getUid())
+                                            .set(userProfile, SetOptions.merge())
+                                            .addOnSuccessListener(unused -> {
+                                                Log.d(TAG, "Profile write success for uid=" + currentUser.getUid());
+                                                setLoading(false);
+                                                Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
+                                                navigateToProfileSetup();
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Log.e(TAG, "Profile write failed on register uid=" + currentUser.getUid(), e);
+                                                setLoading(false);
+                                                Toast.makeText(this, "Profile save failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            });
+                                });
+                    } else {
+                        Log.e(TAG, "Auth registration failed", task.getException());
                         setLoading(false);
-                        Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
-                        return;
+                        Toast.makeText(this, "Auth failed: " + readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
-
-                    FirebaseUser currentUser = firebaseAuth.getCurrentUser();
-                    if (currentUser == null) {
-                        setLoading(false);
-                        Toast.makeText(this, "Registration failed. Try again.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-
-                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                            .setDisplayName(username)
-                            .build();
-
-                    currentUser.updateProfile(profileUpdates)
-                            .addOnCompleteListener(profileTask -> {
-                                Map<String, Object> userProfile = new HashMap<>();
-                                userProfile.put("uid", currentUser.getUid());
-                                userProfile.put("email", email);
-                                userProfile.put("username", username);
-                                userProfile.put("profileCompleted", false);
-                                userProfile.put("createdAt", FieldValue.serverTimestamp());
-                                userProfile.put("updatedAt", FieldValue.serverTimestamp());
-
-                                firebaseFirestore.collection("users")
-                                        .document(currentUser.getUid())
-                                        .set(userProfile, SetOptions.merge())
-                                        .addOnSuccessListener(unused -> {
-                                            Log.d(TAG, "Profile write success for uid=" + currentUser.getUid());
-                                            setLoading(false);
-                                            Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show();
-                                            navigateToProfileSetup();
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Log.e(TAG, "Profile write failed on register uid=" + currentUser.getUid(), e);
-                                            setLoading(false);
-                                            Toast.makeText(this, "Profile save failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                        });
-                            });
                 });
     }
 
     private void loginWithEmail(String email, String password) {
+        Log.d(TAG, "Attempting login for email: " + email);
         firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    setLoading(false);
                     if (task.isSuccessful()) {
+                        Log.d(TAG, "Auth login successful for: " + email);
                         FirebaseUser currentUser = firebaseAuth.getCurrentUser();
                         if (currentUser == null) {
+                            setLoading(false);
                             Toast.makeText(this, "Login failed. Please try again.", Toast.LENGTH_LONG).show();
                             return;
                         }
-
-                        upsertUserProfileAndRoute(currentUser, email, true);
+                        OfflineSessionManager.disableOfflineMode(this);
+                        validateAndRouteMemberLogin(currentUser, email);
                     } else {
-                        Toast.makeText(this, readableError(task.getException()), Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Auth login failed", task.getException());
+                        setLoading(false);
+                        Toast.makeText(this, "Login failed: " + readableError(task.getException()), Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    private void upsertUserProfileAndRoute(FirebaseUser currentUser, String email, boolean showLoginToast) {
+    private void validateAndRouteMemberLogin(FirebaseUser currentUser, String email) {
+        firebaseFirestore.collection(FirestoreCollections.USERS)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                        setLoading(false);
+                        firebaseAuth.signOut();
+                        Toast.makeText(this, R.string.admin_use_admin_login_toast, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    boolean profileCompleted = Boolean.TRUE.equals(snapshot.getBoolean(FIELD_PROFILE_COMPLETED));
+                    syncMemberProfileAndRoute(currentUser, email, profileCompleted, true, true);
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Toast.makeText(this, getString(R.string.role_verify_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void handleExistingSignedInUser(FirebaseUser currentUser) {
+        String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+        firebaseFirestore.collection(FirestoreCollections.USERS)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                        navigateToAdminDashboard();
+                        return;
+                    }
+
+                    boolean profileCompleted = Boolean.TRUE.equals(snapshot.getBoolean(FIELD_PROFILE_COMPLETED));
+                    syncMemberProfileAndRoute(currentUser, email, profileCompleted, false, false);
+                })
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "Failed to load role for existing user", e)
+                );
+    }
+
+    private void syncMemberProfileAndRoute(
+            FirebaseUser currentUser,
+            String email,
+            boolean profileCompleted,
+            boolean showLoginToast,
+            boolean shouldClearLoading
+    ) {
         String fallbackUsername = currentUser.getDisplayName();
         if (TextUtils.isEmpty(fallbackUsername)) {
             int atIndex = email.indexOf("@");
@@ -205,42 +271,46 @@ public class MainActivity extends AppCompatActivity {
         userProfile.put("uid", currentUser.getUid());
         userProfile.put("email", email);
         userProfile.put("username", fallbackUsername);
+        userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
         userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
-        firebaseFirestore.collection("users")
+        firebaseFirestore.collection(FirestoreCollections.USERS)
                 .document(currentUser.getUid())
                 .set(userProfile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
-                    firebaseFirestore.collection("users")
-                            .document(currentUser.getUid())
-                            .get()
-                            .addOnSuccessListener(snapshot -> {
-                                Boolean profileCompleted = snapshot.getBoolean("profileCompleted");
-                                if (showLoginToast) {
-                                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
-                                }
+                    if (shouldClearLoading) {
+                        setLoading(false);
+                    }
+                    if (showLoginToast) {
+                        Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                    }
 
-                                if (Boolean.TRUE.equals(profileCompleted)) {
-                                    navigateToHome();
-                                } else {
-                                    navigateToProfileSetup();
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Profile read failed uid=" + currentUser.getUid(), e);
-                                navigateToProfileSetup();
-                            });
+                    if (profileCompleted) {
+                        navigateToHome();
+                    } else {
+                        navigateToProfileSetup();
+                    }
                 })
                 .addOnFailureListener(e -> {
+                    if (shouldClearLoading) {
+                        setLoading(false);
+                    }
                     Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
                     Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    navigateToProfileSetup();
+                    if (profileCompleted) {
+                        navigateToHome();
+                    } else {
+                        navigateToProfileSetup();
+                    }
                 });
     }
 
     private void setLoading(boolean isLoading) {
         btnRegister.setEnabled(!isLoading);
+        btnAdminLogin.setEnabled(!isLoading);
+        btnOfflineMode.setEnabled(!isLoading);
         tvSwitchMode.setEnabled(!isLoading);
+        // You might want to add a ProgressBar here in your layout
     }
 
     private void clearInputErrors() {
@@ -257,10 +327,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String readableError(Exception exception) {
-        if (exception == null || exception.getMessage() == null) {
-            return "Something went wrong. Please try again.";
+        if (exception == null) return "Unknown error";
+        String message = exception.getMessage();
+        if (message == null) return "Something went wrong";
+
+        if (message.contains("Unable to resolve host")) {
+            return "No internet connection. Please check your network.";
         }
-        return exception.getMessage();
+        return message;
     }
 
     private void navigateToHome() {
@@ -271,5 +345,16 @@ public class MainActivity extends AppCompatActivity {
     private void navigateToProfileSetup() {
         startActivity(new Intent(this, ProfileSetupActivity.class));
         finish();
+    }
+
+    private void navigateToAdminDashboard() {
+        startActivity(new Intent(this, AdminDashboardActivity.class));
+        finish();
+    }
+
+    private void startOfflineMode() {
+        OfflineSessionManager.enableOfflineMode(this);
+        Toast.makeText(this, R.string.main_offline_mode_started, Toast.LENGTH_SHORT).show();
+        navigateToHome();
     }
 }

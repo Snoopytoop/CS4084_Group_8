@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 public class CreatePostActivity extends AppCompatActivity {
     private static final int BLOG_CHAR_THRESHOLD = 260;
+    private static final long MAX_POST_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final Pattern URL_PATTERN = Pattern.compile("(https?://\\S+)", Pattern.CASE_INSENSITIVE);
 
     private TextInputLayout tilPostContent;
@@ -52,6 +53,14 @@ public class CreatePostActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> imagePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
+                    String validationError = ImageValidation.validateImageSelection(this, uri, MAX_POST_IMAGE_BYTES);
+                    if (validationError != null) {
+                        selectedImageUri = null;
+                        ivSelectedPostImage.setVisibility(ImageView.GONE);
+                        btnPickPostImage.setText("Add Photo");
+                        Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     selectedImageUri = uri;
                     ivSelectedPostImage.setImageURI(uri);
                     ivSelectedPostImage.setVisibility(ImageView.VISIBLE);
@@ -77,6 +86,11 @@ public class CreatePostActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (isServerAccessBlocked()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
         if (currentUser == null) {
             Toast.makeText(this, "Please log in to create a post.", Toast.LENGTH_SHORT).show();
             finish();
@@ -99,12 +113,17 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
         ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
+            overridePendingTransition(0, 0);
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavLeaderboard.setOnClickListener(v -> {
@@ -121,6 +140,11 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void publishPost() {
+        if (isServerAccessBlocked()) {
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         clearErrors();
 
         String content = valueOf(etPostContent);
@@ -140,6 +164,19 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void uploadSelectedImageAndCreatePost(String content) {
+        if (isServerAccessBlocked()) {
+            setLoading(false);
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String validationError = ImageValidation.validateImageSelection(this, selectedImageUri, MAX_POST_IMAGE_BYTES);
+        if (validationError != null) {
+            setLoading(false);
+            Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         String filename = currentUser.getUid() + "_" + System.currentTimeMillis() + ".jpg";
         StorageReference imageRef = storage.getReference()
                 .child("post_images")
@@ -160,6 +197,12 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void createPostDocument(String content, String postType, String mediaUrl) {
+        if (isServerAccessBlocked()) {
+            setLoading(false);
+            Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         firestore.collection("users")
                 .document(currentUser.getUid())
                 .get()
@@ -178,6 +221,12 @@ public class CreatePostActivity extends AppCompatActivity {
                     postData.put("commentsCount", 0);
                     postData.put("likedBy", new ArrayList<String>());
                     postData.put("createdAt", FieldValue.serverTimestamp());
+
+                    if (isServerAccessBlocked()) {
+                        setLoading(false);
+                        Toast.makeText(this, R.string.home_offline_feature_unavailable, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
                     firestore.collection("posts")
                             .add(postData)
@@ -234,5 +283,9 @@ public class CreatePostActivity extends AppCompatActivity {
             return matcher.group(1);
         }
         return "";
+    }
+
+    private boolean isServerAccessBlocked() {
+        return ServerFeatureGate.isServerFeatureBlocked(this);
     }
 }

@@ -101,6 +101,17 @@
         app:layout_constraintTop_toBottomOf="@id/tvBioLabel"
         app:layout_constraintVertical_bias="0" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnMessageUser"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/profile_message_button"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvBio" />
+
     <TextView
         android:id="@+id/tvMyPostsLabel"
         android:layout_width="0dp"
@@ -111,7 +122,7 @@
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBio" />
+        app:layout_constraintTop_toBottomOf="@id/btnMessageUser" />
 
     <TextView
         android:id="@+id/tvEmptyMyPosts"

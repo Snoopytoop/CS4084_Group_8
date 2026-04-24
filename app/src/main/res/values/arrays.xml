@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="route_send_status_options">
+        <item>Sent</item>
+        <item>Flashed</item>
+        <item>Project</item>
+        <item>Repeat</item>
+    </string-array>
+
+    <string-array name="belay_capability_options">
+        <item>Top-rope belay</item>
+        <item>Lead belay certified</item>
+        <item>Lead + top-rope belay</item>
+        <item>New to belaying</item>
+    </string-array>
+</resources>

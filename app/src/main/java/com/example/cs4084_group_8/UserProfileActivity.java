@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -51,16 +52,20 @@ public class UserProfileActivity extends AppCompatActivity {
     private ImageButton btnSettings;
     private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
+    private ImageButton btnNavSearch;
     private ImageButton btnNavCreatePost;
     private ImageButton btnNavLeaderboard;
     private ShapeableImageView ivNavProfile;
     private RecyclerView rvMyPosts;
     private TextView tvEmptyMyPosts;
+    private MaterialButton btnMessageUser;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
     private PostAdapter postAdapter;
     private ListenerRegistration myPostsListener;
+    private String viewedUserId = "";
+    private String viewedUsername = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,11 +79,13 @@ public class UserProfileActivity extends AppCompatActivity {
         btnSettings = findViewById(R.id.btnSettings);
         btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
+        btnNavSearch = findViewById(R.id.btnNavSearch);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         rvMyPosts = findViewById(R.id.rvMyPosts);
         tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
+        btnMessageUser = findViewById(R.id.btnMessageUser);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -101,9 +108,14 @@ public class UserProfileActivity extends AppCompatActivity {
 
         btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
+        
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
+            overridePendingTransition(0, 0);
+        });
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavCreatePost.setOnClickListener(v -> {
@@ -115,8 +127,10 @@ public class UserProfileActivity extends AppCompatActivity {
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
-            // Already on profile.
+            // Already on profile, but if viewing another user, we might want to navigate to own? 
+            // For now keep as is.
         });
+        btnMessageUser.setOnClickListener(v -> openDirectMessage());
 
         // Adjust nav bar position for gesture/button navigation
         View bottomNav = findViewById(R.id.bottomNavCard);
@@ -159,17 +173,19 @@ public class UserProfileActivity extends AppCompatActivity {
             finish();
             return;
         }
-
+        viewedUserId = targetUserId;
         // If viewing own profile → show email, else hide it
         if (loggedInUser != null && targetUserId.equals(loggedInUser.getUid())) {
             // Viewing your own profile
             tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
             tvEmail.setVisibility(View.VISIBLE);
             btnSettings.setVisibility(View.VISIBLE); // show settings
+            btnMessageUser.setVisibility(View.GONE);
         } else {
             // Viewing someone else's profile
             tvEmail.setVisibility(View.GONE);
             btnSettings.setVisibility(View.GONE); // hide settings
+            btnMessageUser.setVisibility(View.VISIBLE);
         }
 
         // Load user data from Firestore
@@ -182,10 +198,11 @@ public class UserProfileActivity extends AppCompatActivity {
                     String imageUrl = snapshot.getString("profileImageUrl");
 
                     tvUsername.setText(TextUtils.isEmpty(username) ? "No username yet" : username);
+                    viewedUsername = TextUtils.isEmpty(username) ? "Climber" : username;
                     tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
 
                     if (!TextUtils.isEmpty(imageUrl)) {
-                        loadProfileImages(imageUrl);
+                        loadProfileImages(imageUrl, targetUserId);
                     } else {
                         ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
                         ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
@@ -196,6 +213,21 @@ public class UserProfileActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void openDirectMessage() {
+        if (currentUser == null || TextUtils.isEmpty(viewedUserId)) {
+            return;
+        }
+        if (TextUtils.equals(currentUser.getUid(), viewedUserId)) {
+            Toast.makeText(this, "You cannot message yourself.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, ChatActivity.class);
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_ID, viewedUserId);
+        intent.putExtra(ChatActivity.EXTRA_OTHER_USER_NAME, viewedUsername);
+        startActivity(intent);
     }
 
     private void listenForMyPosts(String uid) {
@@ -295,6 +327,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 .create();
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            android.widget.Button postButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             if (currentUser == null) {
                 dialog.dismiss();
                 return;
@@ -305,6 +338,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 return;
             }
 
+            postButton.setEnabled(false);
             firestore.collection("users")
                     .document(currentUser.getUid())
                     .get()
@@ -326,18 +360,24 @@ public class UserProfileActivity extends AppCompatActivity {
                                     batch.update(postRef, "commentsCount", FieldValue.increment(1));
                                 })
                                 .addOnSuccessListener(unused -> dialog.dismiss())
-                                .addOnFailureListener(e -> Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                                .addOnFailureListener(e -> {
+                                    postButton.setEnabled(true);
+                                    Toast.makeText(this, "Failed to post comment: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                });
+                    })
+                    .addOnFailureListener(e -> {
+                        postButton.setEnabled(true);
+                        Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
         }));
         dialog.show();
     }
 
-    private void loadProfileImages(String imageUrl) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
+    private void loadProfileImages(String imageUrl, String profileUserId) {
+        if (!TextUtils.isEmpty(profileUserId)) {
             getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
                     .edit()
-                    .putString(PROFILE_IMAGE_URL_PREFIX + user.getUid(), imageUrl)
+                    .putString(PROFILE_IMAGE_URL_PREFIX + profileUserId, imageUrl)
                     .apply();
         }
 
@@ -366,6 +406,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 return true;
             }
             if (item.getItemId() == MENU_LOGOUT_ID) {
+                OfflineSessionManager.disableOfflineMode(this);
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(this, MainActivity.class));
                 finish();

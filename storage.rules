@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function imageUpload(maxBytes) {
+      return request.resource != null
+          && request.resource.size <= maxBytes
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    match /profile_images/{fileName} {
+      allow read: if signedIn();
+
+      allow write: if signedIn()
+          && fileName == request.auth.uid + '.jpg'
+          && imageUpload(5 * 1024 * 1024);
+    }
+
+    match /post_images/{fileName} {
+      allow read: if signedIn();
+
+      allow write: if signedIn()
+          && fileName.matches('^' + request.auth.uid + '_.*')
+          && imageUpload(10 * 1024 * 1024);
+    }
+  }
+}

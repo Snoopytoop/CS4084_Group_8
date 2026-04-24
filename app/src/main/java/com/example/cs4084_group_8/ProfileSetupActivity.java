@@ -50,6 +50,12 @@ public class ProfileSetupActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> imagePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
+                    String validationError = ImageValidation.validateImageSelection(this, uri, MAX_IMAGE_BYTES);
+                    if (validationError != null) {
+                        selectedImageUri = null;
+                        Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     selectedImageUri = uri;
                     ivProfile.setImageURI(uri);
                 }
@@ -102,6 +108,13 @@ public class ProfileSetupActivity extends AppCompatActivity {
         setLoading(true);
         if (selectedImageUri == null) {
             persistProfile(currentUser, bio, existingImageUrl);
+            return;
+        }
+
+        String validationError = ImageValidation.validateImageSelection(this, selectedImageUri, MAX_IMAGE_BYTES);
+        if (validationError != null) {
+            setLoading(false);
+            Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
             return;
         }
 
