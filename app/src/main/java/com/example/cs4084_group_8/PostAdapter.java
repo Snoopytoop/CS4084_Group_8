@@ -52,11 +52,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         Post post = posts.get(position);
 
         holder.tvPostAuthor.setText(TextUtils.isEmpty(post.getAuthorName()) ? "Unknown user" : post.getAuthorName());
-        holder.tvPostAuthor.setOnClickListener(v -> {
-            Intent intent = new Intent(v.getContext(), UserProfileActivity.class);
-            intent.putExtra("USER_ID", post.getAuthorUid()); // or post.getAuthorName()
-            v.getContext().startActivity(intent);
-        });
+        String authorUid = post.getAuthorUid();
+        if (TextUtils.isEmpty(authorUid)) {
+            holder.tvPostAuthor.setOnClickListener(null);
+            holder.tvPostAuthor.setClickable(false);
+            holder.tvPostAuthor.setEnabled(false);
+        } else {
+            holder.tvPostAuthor.setEnabled(true);
+            holder.tvPostAuthor.setClickable(true);
+            holder.tvPostAuthor.setOnClickListener(v -> {
+                Intent intent = new Intent(v.getContext(), UserProfileActivity.class);
+                intent.putExtra("USER_ID", authorUid);
+                v.getContext().startActivity(intent);
+            });
+        }
         holder.tvPostContent.setText(TextUtils.isEmpty(post.getContent()) ? "" : post.getContent());
         holder.btnLike.setText("Like (" + post.getLikesCount() + ")");
         holder.btnComment.setText("Comment (" + post.getCommentsCount() + ")");
