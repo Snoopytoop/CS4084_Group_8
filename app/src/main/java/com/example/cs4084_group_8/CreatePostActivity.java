@@ -29,6 +29,7 @@ import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -214,7 +215,7 @@ public class CreatePostActivity extends AppCompatActivity {
                     postData.put("authorUid", currentUser.getUid());
                     postData.put("authorName", TextUtils.isEmpty(authorName) ? "Unknown user" : authorName);
                     postData.put("authorProfileImageUrl", authorProfileImageUrl);
-                    postData.put("postType", postType.toLowerCase());
+                    postData.put("postType", postType.toLowerCase(Locale.ROOT));
                     postData.put("content", content);
                     postData.put("mediaUrl", mediaUrl);
                     postData.put("likesCount", 0);
@@ -264,7 +265,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private String inferPostType(String content) {
         String firstUrl = extractFirstUrl(content);
         if (!TextUtils.isEmpty(firstUrl)) {
-            String normalized = firstUrl.toLowerCase();
+            String normalized = firstUrl.toLowerCase(Locale.ROOT);
             if (normalized.contains("youtube.com")
                     || normalized.contains("youtu.be")
                     || normalized.contains("vimeo.com")
