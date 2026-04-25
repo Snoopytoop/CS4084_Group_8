@@ -34,7 +34,7 @@
                 android:id="@+id/tvCreatePostTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Create Post"
+                android:text="@string/create_post_title"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
@@ -43,7 +43,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="Share an update, story, photo or video."
+                android:text="@string/create_post_subtitle"
                 android:textSize="14sp" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -51,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="What's on your mind?">
+                android:hint="@string/create_post_hint">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPostContent"
@@ -68,7 +68,7 @@
                 android:layout_height="160dp"
                 android:layout_marginTop="12dp"
                 android:adjustViewBounds="true"
-                android:contentDescription="Selected post image preview"
+                android:contentDescription="@string/create_post_selected_image_cd"
                 android:scaleType="centerCrop"
                 android:src="@android:drawable/ic_menu_gallery"
                 android:visibility="gone" />
@@ -79,14 +79,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="Add Photo" />
+                android:text="@string/create_post_add_photo" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPublishPost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="Publish Post" />
+                android:text="@string/create_post_publish" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -58,14 +58,14 @@ public class CreatePostActivity extends AppCompatActivity {
                     if (validationError != null) {
                         selectedImageUri = null;
                         ivSelectedPostImage.setVisibility(ImageView.GONE);
-                        btnPickPostImage.setText("Add Photo");
+                        btnPickPostImage.setText(R.string.create_post_add_photo);
                         Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
                         return;
                     }
                     selectedImageUri = uri;
                     ivSelectedPostImage.setImageURI(uri);
                     ivSelectedPostImage.setVisibility(ImageView.VISIBLE);
-                    btnPickPostImage.setText("Change Photo");
+                    btnPickPostImage.setText(R.string.create_post_change_photo);
                 }
             });
 

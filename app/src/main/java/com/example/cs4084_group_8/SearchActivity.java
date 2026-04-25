@@ -169,7 +169,7 @@ public class SearchActivity extends AppCompatActivity {
                     userList.clear();
                     adapter.notifyDataSetChanged();
                     tvNoResults.setVisibility(View.VISIBLE);
-                    Toast.makeText(SearchActivity.this, "Search failed. Try again.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(SearchActivity.this, R.string.search_failed_toast, Toast.LENGTH_SHORT).show();
                 });
     }
 

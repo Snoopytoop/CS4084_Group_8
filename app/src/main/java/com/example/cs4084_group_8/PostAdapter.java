@@ -51,7 +51,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
         Post post = posts.get(position);
 
-        holder.tvPostAuthor.setText(TextUtils.isEmpty(post.getAuthorName()) ? "Unknown user" : post.getAuthorName());
+        holder.tvPostAuthor.setText(TextUtils.isEmpty(post.getAuthorName())
+                ? holder.itemView.getContext().getString(R.string.unknown_user)
+                : post.getAuthorName());
         String authorUid = post.getAuthorUid();
         if (TextUtils.isEmpty(authorUid)) {
             holder.tvPostAuthor.setOnClickListener(null);
@@ -67,8 +69,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             });
         }
         holder.tvPostContent.setText(TextUtils.isEmpty(post.getContent()) ? "" : post.getContent());
-        holder.btnLike.setText("Like (" + post.getLikesCount() + ")");
-        holder.btnComment.setText("Comment (" + post.getCommentsCount() + ")");
+        holder.btnLike.setText(holder.itemView.getContext().getString(R.string.post_like_format, post.getLikesCount()));
+        holder.btnComment.setText(holder.itemView.getContext().getString(R.string.post_comment_format, post.getCommentsCount()));
 
         boolean likedByCurrentUser = post.getLikedBy().contains(currentUserUid);
         holder.btnLike.setEnabled(!TextUtils.isEmpty(currentUserUid));
@@ -87,7 +89,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         } else if ("video".equals(postType) && !TextUtils.isEmpty(mediaUrl)) {
             holder.ivPostMedia.setVisibility(View.GONE);
             holder.tvMediaHint.setVisibility(View.VISIBLE);
-            holder.tvMediaHint.setText("Video URL: " + mediaUrl);
+            holder.tvMediaHint.setText(holder.itemView.getContext().getString(R.string.post_video_url_format, mediaUrl));
         } else {
             holder.ivPostMedia.setVisibility(View.GONE);
             holder.tvMediaHint.setVisibility(View.GONE);

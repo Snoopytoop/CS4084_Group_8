@@ -20,7 +20,7 @@
             android:id="@+id/tvHomeTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ClimbShare"
+            android:text="@string/home_title"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -108,7 +108,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Recent Posts"
+        android:text="@string/home_recent_posts"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -120,7 +120,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
-        android:text="No posts yet. Tap + to create one."
+        android:text="@string/home_empty_feed"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
