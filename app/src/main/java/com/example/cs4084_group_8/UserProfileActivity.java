@@ -127,8 +127,13 @@ public class UserProfileActivity extends AppCompatActivity {
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
-            // Already on profile, but if viewing another user, we might want to navigate to own? 
-            // For now keep as is.
+            // If already on profile, but viewing someone else, go to own profile
+            if (currentUser != null && !TextUtils.equals(viewedUserId, currentUser.getUid())) {
+                Intent intent = new Intent(this, UserProfileActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
         });
         btnMessageUser.setOnClickListener(v -> openDirectMessage());
 
@@ -146,6 +151,10 @@ public class UserProfileActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            loadNavProfileImage(currentUser.getUid(), ivNavProfile);
+        }
         loadUserProfile();
     }
 
@@ -202,10 +211,9 @@ public class UserProfileActivity extends AppCompatActivity {
                     tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
 
                     if (!TextUtils.isEmpty(imageUrl)) {
-                        loadProfileImages(imageUrl, targetUserId);
+                        renderViewedProfileImage(imageUrl, ivProfile);
                     } else {
                         ivProfile.setImageResource(R.drawable.ic_person);
-                        ivNavProfile.setImageResource(R.drawable.ic_person);
                     }
 
                     // Load THAT user's posts
@@ -213,6 +221,47 @@ public class UserProfileActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void loadNavProfileImage(String uid, ImageView targetView) {
+        String cachedUrl = getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
+                .getString(PROFILE_IMAGE_URL_PREFIX + uid, null);
+        if (!TextUtils.isEmpty(cachedUrl)) {
+            renderNavProfileImage(cachedUrl, targetView);
+        }
+
+        firestore.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String imageUrl = snapshot.getString("profileImageUrl");
+                    if (TextUtils.isEmpty(imageUrl)) {
+                        targetView.setImageResource(R.drawable.ic_person);
+                        return;
+                    }
+                    getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
+                            .edit()
+                            .putString(PROFILE_IMAGE_URL_PREFIX + uid, imageUrl)
+                            .apply();
+                    renderNavProfileImage(imageUrl, targetView);
+                })
+                .addOnFailureListener(e -> targetView.setImageResource(R.drawable.ic_person));
+    }
+
+    private void renderNavProfileImage(String imageUrl, ImageView targetView) {
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .into(targetView);
+    }
+
+    private void renderViewedProfileImage(String imageUrl, ImageView targetView) {
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .into(targetView);
     }
 
     private void openDirectMessage() {
@@ -371,27 +420,6 @@ public class UserProfileActivity extends AppCompatActivity {
                     });
         }));
         dialog.show();
-    }
-
-    private void loadProfileImages(String imageUrl, String profileUserId) {
-        if (!TextUtils.isEmpty(profileUserId)) {
-            getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
-                    .edit()
-                    .putString(PROFILE_IMAGE_URL_PREFIX + profileUserId, imageUrl)
-                    .apply();
-        }
-
-        Glide.with(this)
-                .load(imageUrl)
-                .placeholder(R.drawable.ic_person)
-                .error(R.drawable.ic_person)
-                .into(ivProfile);
-
-        Glide.with(this)
-                .load(imageUrl)
-                .placeholder(R.drawable.ic_person)
-                .error(R.drawable.ic_person)
-                .into(ivNavProfile);
     }
 
     private void showSettingsMenu() {
