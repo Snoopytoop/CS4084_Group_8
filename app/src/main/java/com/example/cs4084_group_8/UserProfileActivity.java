@@ -50,7 +50,6 @@ public class UserProfileActivity extends AppCompatActivity {
     private TextView tvEmail;
     private TextView tvBio;
     private ImageButton btnSettings;
-    private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
     private ImageButton btnNavSearch;
     private ImageButton btnNavCreatePost;
@@ -77,7 +76,6 @@ public class UserProfileActivity extends AppCompatActivity {
         tvEmail = findViewById(R.id.tvEmail);
         tvBio = findViewById(R.id.tvBio);
         btnSettings = findViewById(R.id.btnSettings);
-        btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
         btnNavSearch = findViewById(R.id.btnNavSearch);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
@@ -107,8 +105,7 @@ public class UserProfileActivity extends AppCompatActivity {
         rvMyPosts.setAdapter(postAdapter);
 
         btnSettings.setOnClickListener(v -> showSettingsMenu());
-        btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
-        
+
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
