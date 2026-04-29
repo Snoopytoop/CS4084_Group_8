@@ -75,7 +75,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_route_log_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_route_log_button"
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnQuickMessages"
@@ -85,7 +88,10 @@
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_messages_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_messages_button"
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnQuickFindBelayer"
@@ -94,7 +100,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_find_belayer_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_find_belayer_button"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
