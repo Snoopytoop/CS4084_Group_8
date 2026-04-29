@@ -21,6 +21,34 @@
     <string name="home_retry_online_success">Connection restored. Refreshing online features.</string>
     <string name="home_retry_already_online">You are already online.</string>
     <string name="home_loading_posts">Loading posts...</string>
+    <string name="home_title">ClimbShare</string>
+    <string name="home_recent_posts">Recent Posts</string>
+    <string name="home_empty_feed">No posts yet. Tap + to create one.</string>
+
+    <string name="unknown_user">Unknown user</string>
+    <string name="post_like_format">Like (%1$d)</string>
+    <string name="post_comment_format">Comment (%1$d)</string>
+    <string name="post_video_url_format">Video URL: %1$s</string>
+
+    <string name="search_failed_toast">Search failed. Try again.</string>
+
+    <string name="create_post_title">Create Post</string>
+    <string name="create_post_subtitle">Share an update, story, photo or video.</string>
+    <string name="create_post_hint">What\'s on your mind?</string>
+    <string name="create_post_selected_image_cd">Selected post image preview</string>
+    <string name="create_post_add_photo">Add Photo</string>
+    <string name="create_post_change_photo">Change Photo</string>
+    <string name="create_post_publish">Publish Post</string>
+
+    <string name="leaderboard_title">Leaderboard</string>
+    <string name="leaderboard_description">Upload a time in seconds and milliseconds. Fastest times appear first.</string>
+    <string name="leaderboard_seconds_hint">Seconds</string>
+    <string name="leaderboard_milliseconds_hint">Milliseconds</string>
+    <string name="leaderboard_upload_time">Upload Time</string>
+    <string name="leaderboard_tab_global">Global</string>
+    <string name="leaderboard_tab_personal">Personal</string>
+    <string name="leaderboard_section_best_time_per_user">Best time per user</string>
+    <string name="leaderboard_empty">Leaderboard is empty. Submit a time!</string>
     <string name="admin_login_title">Admin Login</string>
     <string name="admin_login_subtitle">Restricted access for elevated accounts</string>
     <string name="admin_login_card_title">Sign in as admin</string>
