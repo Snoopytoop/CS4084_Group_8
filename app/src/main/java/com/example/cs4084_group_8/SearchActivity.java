@@ -177,7 +177,9 @@ public class SearchActivity extends AppCompatActivity {
         firestore.collection("users").document(uid).get().addOnSuccessListener(snapshot -> {
             String url = snapshot.getString("profileImageUrl");
             if (!TextUtils.isEmpty(url)) {
-                Glide.with(this).load(url).placeholder(android.R.drawable.ic_menu_camera).into(ivNavProfile);
+                Glide.with(this).load(url).placeholder(R.drawable.ic_person).into(ivNavProfile);
+            } else {
+                ivNavProfile.setImageResource(R.drawable.ic_person);
             }
         });
     }

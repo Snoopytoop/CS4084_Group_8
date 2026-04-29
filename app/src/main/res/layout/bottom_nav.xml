@@ -67,7 +67,7 @@
             android:focusable="true"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@android:drawable/ic_menu_camera"
+            android:src="@drawable/ic_person"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.CS4084.Circle" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
