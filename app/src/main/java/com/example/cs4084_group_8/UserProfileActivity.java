@@ -204,8 +204,8 @@ public class UserProfileActivity extends AppCompatActivity {
                     if (!TextUtils.isEmpty(imageUrl)) {
                         loadProfileImages(imageUrl, targetUserId);
                     } else {
-                        ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
-                        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+                        ivProfile.setImageResource(R.drawable.ic_person);
+                        ivNavProfile.setImageResource(R.drawable.ic_person);
                     }
 
                     // Load THAT user's posts
@@ -383,14 +383,14 @@ public class UserProfileActivity extends AppCompatActivity {
 
         Glide.with(this)
                 .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .error(android.R.drawable.ic_menu_camera)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
                 .into(ivProfile);
 
         Glide.with(this)
                 .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .error(android.R.drawable.ic_menu_camera)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
                 .into(ivNavProfile);
     }
 

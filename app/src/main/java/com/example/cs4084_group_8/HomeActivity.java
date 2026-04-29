@@ -390,7 +390,7 @@ public class HomeActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshot -> {
                     String imageUrl = snapshot.getString("profileImageUrl");
                     if (TextUtils.isEmpty(imageUrl)) {
-                        targetView.setImageResource(android.R.drawable.ic_menu_camera);
+                        targetView.setImageResource(R.drawable.ic_person);
                         return;
                     }
                     getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
@@ -399,14 +399,14 @@ public class HomeActivity extends AppCompatActivity {
                             .apply();
                     renderProfileImage(imageUrl, targetView);
                 })
-                .addOnFailureListener(e -> targetView.setImageResource(android.R.drawable.ic_menu_camera));
+                .addOnFailureListener(e -> targetView.setImageResource(R.drawable.ic_person));
     }
 
     private void renderProfileImage(String imageUrl, ImageView targetView) {
         Glide.with(this)
                 .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .error(android.R.drawable.ic_menu_camera)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
                 .into(targetView);
     }
 
@@ -531,7 +531,7 @@ public class HomeActivity extends AppCompatActivity {
 
         firebaseServerReachable = false;
         postAdapter.submitList(new ArrayList<>());
-        ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        ivNavProfile.setImageResource(R.drawable.ic_person);
         tvEmptyFeed.setVisibility(View.VISIBLE);
         tvEmptyFeed.setText(R.string.home_checking_connection);
         enableOfflineUi();
@@ -583,7 +583,7 @@ public class HomeActivity extends AppCompatActivity {
         }
         firebaseServerReachable = false;
         postAdapter.submitList(new ArrayList<>());
-        ivNavProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        ivNavProfile.setImageResource(R.drawable.ic_person);
         tvEmptyFeed.setVisibility(View.VISIBLE);
         tvEmptyFeed.setText(R.string.home_offline_mode_empty_state);
         enableOfflineUi();
@@ -595,7 +595,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private void applyLoggedOutState() {
         firebaseServerReachable = false;
-        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+        ivNavProfile.setImageResource(R.drawable.ic_person);
         tvEmptyFeed.setText("Please log in to view and create posts.");
         tvEmptyFeed.setVisibility(View.VISIBLE);
         setDisabledUiState(btnNavSearch);
