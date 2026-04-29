@@ -15,9 +15,12 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function conversationIdHasCurrentUser(conversationId) {
-      return signedIn()
-          && conversationId.matches('(^|_)' + request.auth.uid + '(_|$)');
+    function isConversationParticipant(conversationId) {
+      // Matches UID1_UID2 format where current user is either UID1 or UID2
+      return signedIn() && (
+        conversationId.matches('^' + request.auth.uid + '_.*') ||
+        conversationId.matches('.*_' + request.auth.uid + '$')
+      );
     }
 
     function onlyFieldsChanged(fields) {
@@ -39,7 +42,7 @@ service cloud.firestore {
 
       allow create: if self(userId)
           && request.resource.data.uid == request.auth.uid
-          && request.resource.data.role == 'user';
+          && (!('role' in request.resource.data) || request.resource.data.role == 'user');
 
       allow update: if admin()
           || (self(userId)
@@ -97,65 +100,37 @@ service cloud.firestore {
       allow read: if signedIn();
 
       allow create: if signedIn()
-          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'title', 'body', 'createdAt'])
-          && request.resource.data.authorUid == request.auth.uid
-          && request.resource.data.authorName is string
-          && request.resource.data.authorName.size() > 0
-          && request.resource.data.authorName.size() <= 80
-          && request.resource.data.title is string
-          && request.resource.data.title.size() > 0
-          && request.resource.data.title.size() <= 120
-          && request.resource.data.body is string
-          && request.resource.data.body.size() > 0
-          && request.resource.data.body.size() <= 6000;
+          && request.resource.data.authorUid == request.auth.uid;
 
       allow update: if admin()
-          || (signedIn()
-              && resource.data.authorUid == request.auth.uid
-              && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'title', 'body', 'createdAt'])
-              && request.resource.data.authorUid == resource.data.authorUid
-              && request.resource.data.authorName is string
-              && request.resource.data.authorName.size() > 0
-              && request.resource.data.authorName.size() <= 80
-              && request.resource.data.title is string
-              && request.resource.data.title.size() > 0
-              && request.resource.data.title.size() <= 120
-              && request.resource.data.body is string
-              && request.resource.data.body.size() > 0
-              && request.resource.data.body.size() <= 6000);
+          || (signedIn() && resource.data.authorUid == request.auth.uid);
 
       allow delete: if admin() || resource.data.authorUid == request.auth.uid;
     }
 
     match /conversations/{conversationId} {
-      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow read: if signedIn() && (
+        isConversationParticipant(conversationId) ||
+        (resource != null && request.auth.uid in resource.data.participants)
+      );
 
       allow create: if signedIn()
           && request.auth.uid in request.resource.data.participants
-          && request.resource.data.participants.size() == 2
-          && request.resource.data.lastMessageSenderUid == request.auth.uid
-          && request.resource.data.lastMessageText.size() > 0;
+          && request.resource.data.participants.size() == 2;
 
       allow update: if admin()
-          || (signedIn()
-              && request.auth.uid in resource.data.participants
-              && request.resource.data.participants == resource.data.participants
-              && request.resource.data.lastMessageSenderUid == request.auth.uid
-              && request.resource.data.lastMessageText.size() > 0);
+          || (signedIn() && request.auth.uid in resource.data.participants);
 
       allow delete: if admin();
 
       match /messages/{messageId} {
-        allow read: if signedIn()
-            && (
-              (resource.data.participants is list && request.auth.uid in resource.data.participants)
-              || conversationIdHasCurrentUser(conversationId)
-            );
+        allow read: if signedIn() && (
+          isConversationParticipant(conversationId) ||
+          (resource != null && request.auth.uid in resource.data.participants)
+        );
 
         allow create: if signedIn()
-            && request.auth.uid in getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
             && request.resource.data.senderUid == request.auth.uid
-            && request.resource.data.text.size() > 0
             && request.resource.data.participants is list
             && request.auth.uid in request.resource.data.participants;
 
@@ -167,13 +142,9 @@ service cloud.firestore {
       allow read: if signedIn();
 
       allow create: if signedIn()
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.seconds >= 0
-          && request.resource.data.milliseconds >= 0
-          && request.resource.data.milliseconds < 1000
-          && request.resource.data.totalMs >= 0;
+          && request.resource.data.uid == request.auth.uid;
 
-      allow update, delete: if admin() || resource.data.uid == request.auth.uid;
+      allow update, delete: if admin() || request.resource.data.uid == request.auth.uid;
     }
   }
 }
