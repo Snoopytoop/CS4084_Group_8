@@ -10,7 +10,7 @@
         android:id="@+id/tvLeaderboardTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Leaderboard"
+        android:text="@string/leaderboard_title"
         android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,7 +21,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Upload a time in seconds and milliseconds. Fastest times appear first."
+        android:text="@string/leaderboard_description"
         android:textSize="14sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -42,7 +42,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Seconds"
+            android:hint="@string/leaderboard_seconds_hint"
             android:inputType="number"
             android:maxLines="1" />
 
@@ -52,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:hint="Milliseconds"
+            android:hint="@string/leaderboard_milliseconds_hint"
             android:inputType="number"
             android:maxLines="1" />
 
@@ -63,7 +63,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="Upload Time"
+        android:text="@string/leaderboard_upload_time"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/inputRow" />
 
@@ -82,14 +82,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Global" />
+            android:text="@string/leaderboard_tab_global" />
 
         <Button
             android:id="@+id/btnPersonal"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Personal" />
+            android:text="@string/leaderboard_tab_personal" />
     </LinearLayout>
 
     <TextView
@@ -97,7 +97,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="Best time per user"
+        android:text="@string/leaderboard_section_best_time_per_user"
         android:textStyle="bold"
         android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
@@ -129,7 +129,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:text="Leaderboard is empty. Submit a time!"
+            android:text="@string/leaderboard_empty"
             android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>

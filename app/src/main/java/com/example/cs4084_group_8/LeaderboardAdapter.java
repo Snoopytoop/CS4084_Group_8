@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
 
@@ -53,11 +54,11 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
 
         long seconds = entry.getSeconds();
         long milliseconds = entry.getMilliseconds();
-        holder.tvTime.setText(String.format("%d.%03ds", seconds, milliseconds));
+        holder.tvTime.setText(String.format(Locale.getDefault(), "%d.%03ds", seconds, milliseconds));
 
         String dateText = "-";
         if (entry.getCreatedAt() != null) {
-            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
             dateText = format.format(entry.getCreatedAt().toDate());
         }
         holder.tvDate.setText(dateText);

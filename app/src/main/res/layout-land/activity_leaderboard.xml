@@ -33,7 +33,7 @@
                 android:id="@+id/tvLeaderboardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Leaderboard"
+                android:text="@string/leaderboard_title"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
@@ -42,7 +42,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Upload a time in seconds and milliseconds. Fastest times appear first."
+                android:text="@string/leaderboard_description"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -57,7 +57,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Seconds"
+                    android:hint="@string/leaderboard_seconds_hint"
                     android:inputType="number"
                     android:maxLines="1" />
 
@@ -67,7 +67,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:hint="Milliseconds"
+                    android:hint="@string/leaderboard_milliseconds_hint"
                     android:inputType="number"
                     android:maxLines="1" />
             </LinearLayout>
@@ -77,7 +77,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="Upload Time" />
+                android:text="@string/leaderboard_upload_time" />
 
             <LinearLayout
                 android:id="@+id/tabMenu"
@@ -91,14 +91,14 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Global" />
+                    android:text="@string/leaderboard_tab_global" />
 
                 <Button
                     android:id="@+id/btnPersonal"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Personal" />
+                    android:text="@string/leaderboard_tab_personal" />
             </LinearLayout>
 
             <TextView
@@ -106,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Best time per user"
+                android:text="@string/leaderboard_section_best_time_per_user"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -135,7 +135,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:minHeight="140dp"
-                    android:text="Leaderboard is empty. Submit a time!"
+                    android:text="@string/leaderboard_empty"
                     android:textSize="14sp"
                     android:visibility="gone" />
             </FrameLayout>

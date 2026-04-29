@@ -54,7 +54,9 @@ public class BlogPostAdapter extends RecyclerView.Adapter<BlogPostAdapter.BlogPo
     public void onBindViewHolder(@NonNull BlogPostViewHolder holder, int position) {
         BlogPost post = posts.get(position);
         holder.tvBlogTitle.setText(TextUtils.isEmpty(post.getTitle()) ? "" : post.getTitle());
-        holder.tvBlogAuthor.setText(TextUtils.isEmpty(post.getAuthorName()) ? "Unknown user" : post.getAuthorName());
+        holder.tvBlogAuthor.setText(TextUtils.isEmpty(post.getAuthorName())
+                ? holder.itemView.getContext().getString(R.string.unknown_user)
+                : post.getAuthorName());
         holder.tvBlogPublishedAt.setText(formatTimestamp(post.getCreatedAt()));
         holder.tvBlogBody.setText(TextUtils.isEmpty(post.getBody()) ? "" : post.getBody());
 

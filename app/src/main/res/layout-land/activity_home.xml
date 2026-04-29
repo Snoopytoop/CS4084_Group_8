@@ -40,7 +40,7 @@
                     android:id="@+id/tvHomeTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ClimbShare"
+                    android:text="@string/home_title"
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
@@ -75,7 +75,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_route_log_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_route_log_button"
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnQuickMessages"
@@ -85,7 +88,10 @@
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_messages_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_messages_button"
+                    android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnQuickFindBelayer"
@@ -94,7 +100,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:layout_weight="1"
-                    android:text="@string/home_find_belayer_button" />
+                    android:minHeight="64dp"
+                    android:padding="4dp"
+                    android:text="@string/home_find_belayer_button"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -119,7 +128,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Recent Posts"
+                android:text="@string/home_recent_posts"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -129,7 +138,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:gravity="center_horizontal"
-                android:text="No posts yet. Tap + to create one."
+                android:text="@string/home_empty_feed"
                 android:textSize="14sp" />
 
             <androidx.recyclerview.widget.RecyclerView
