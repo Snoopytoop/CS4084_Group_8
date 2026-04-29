@@ -43,16 +43,7 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <ImageButton
-                    android:id="@+id/btnCreatePostTop"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="8dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Create post"
-                    android:src="@android:drawable/ic_menu_add" />
-
-                <ImageButton
+<ImageButton
                     android:id="@+id/btnSettings"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
