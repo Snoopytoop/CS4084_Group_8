@@ -17,6 +17,27 @@
         app:subtitle="@string/inbox_subtitle"
         app:subtitleTextColor="@color/route_log_text_secondary" />
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilInboxSearch"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        android:hint="Search users"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/route_log_text_secondary">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etInboxSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:textColor="@color/route_log_text_primary"
+            android:textColorHint="@color/route_log_text_secondary" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -27,6 +48,14 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:padding="16dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvUserSearch"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="16dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvInboxEmpty"
