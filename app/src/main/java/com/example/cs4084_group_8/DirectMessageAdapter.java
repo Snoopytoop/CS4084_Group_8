@@ -11,6 +11,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
@@ -20,23 +22,33 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdapter.DirectMessageViewHolder> {
+public class DirectMessageAdapter extends ListAdapter<DirectMessage, DirectMessageAdapter.DirectMessageViewHolder> {
+    private static final DiffUtil.ItemCallback<DirectMessage> DIFF_CALLBACK = new DiffUtil.ItemCallback<DirectMessage>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull DirectMessage oldItem, @NonNull DirectMessage newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull DirectMessage oldItem, @NonNull DirectMessage newItem) {
+            return Objects.equals(oldItem.getText(), newItem.getText())
+                    && Objects.equals(oldItem.getSenderUid(), newItem.getSenderUid())
+                    && Objects.equals(oldItem.getCreatedAt(), newItem.getCreatedAt())
+                    && oldItem.isPendingWrite() == newItem.isPendingWrite();
+        }
+    };
+
     private static final SimpleDateFormat TIMESTAMP_FORMAT =
             new SimpleDateFormat("HH:mm", Locale.getDefault());
-    private final List<DirectMessage> messages = new ArrayList<>();
     private final LayoutInflater layoutInflater;
     private final String currentUserUid;
 
     public DirectMessageAdapter(LayoutInflater layoutInflater, String currentUserUid) {
+        super(DIFF_CALLBACK);
         this.layoutInflater = layoutInflater;
         this.currentUserUid = currentUserUid;
-    }
-
-    public void submitMessages(List<DirectMessage> directMessages) {
-        messages.clear();
-        messages.addAll(directMessages);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -48,7 +60,7 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
 
     @Override
     public void onBindViewHolder(@NonNull DirectMessageViewHolder holder, int position) {
-        DirectMessage message = messages.get(position);
+        DirectMessage message = getItem(position);
         boolean outgoing = TextUtils.equals(currentUserUid, message.getSenderUid());
 
         LinearLayout.LayoutParams containerParams =
@@ -91,11 +103,6 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
         holder.messageCard.setCardBackgroundColor(cardColor);
         holder.tvBody.setTextColor(bodyColor);
         holder.tvTime.setTextColor(timeColor);
-    }
-
-    @Override
-    public int getItemCount() {
-        return messages.size();
     }
 
     private String formatTimestamp(Timestamp timestamp) {

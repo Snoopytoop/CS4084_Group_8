@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
@@ -16,8 +18,24 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.BelayerPostViewHolder> {
+public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdapter.BelayerPostViewHolder> {
+    private static final DiffUtil.ItemCallback<BelayerPost> DIFF_CALLBACK = new DiffUtil.ItemCallback<BelayerPost>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull BelayerPost oldItem, @NonNull BelayerPost newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull BelayerPost oldItem, @NonNull BelayerPost newItem) {
+            return Objects.equals(oldItem.getAuthorName(), newItem.getAuthorName())
+                    && Objects.equals(oldItem.getWallName(), newItem.getWallName())
+                    && Objects.equals(oldItem.getClimbDays(), newItem.getClimbDays())
+                    && Objects.equals(oldItem.getCreatedAt(), newItem.getCreatedAt());
+        }
+    };
+
     public interface ActionListener {
         void onMessage(BelayerPost post);
 
@@ -28,23 +46,17 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
         void onViewProfile(BelayerPost post);
     }
 
-    private final List<BelayerPost> posts = new ArrayList<>();
+    private static final SimpleDateFormat TIMESTAMP_FORMAT =
+            new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
     private final LayoutInflater layoutInflater;
     private final ActionListener actionListener;
     private final String currentUserUid;
-    private final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
 
     public BelayerPostAdapter(LayoutInflater layoutInflater, ActionListener actionListener, String currentUserUid) {
+        super(DIFF_CALLBACK);
         this.layoutInflater = layoutInflater;
         this.actionListener = actionListener;
         this.currentUserUid = currentUserUid;
-    }
-
-    public void submitPosts(List<BelayerPost> belayerPosts) {
-        posts.clear();
-        posts.addAll(belayerPosts);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -56,7 +68,7 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull BelayerPostViewHolder holder, int position) {
-        BelayerPost post = posts.get(position);
+        BelayerPost post = getItem(position);
         holder.tvDisplayName.setText(post.getAuthorName());
         holder.tvPostedTime.setText(formatTimestamp(post.getCreatedAt()));
         holder.tvWallName.setText(
@@ -95,16 +107,11 @@ public class BelayerPostAdapter extends RecyclerView.Adapter<BelayerPostAdapter.
         holder.btnDeleteBelayerPost.setOnClickListener(view -> actionListener.onDeletePost(post));
     }
 
-    @Override
-    public int getItemCount() {
-        return posts.size();
-    }
-
     private String formatTimestamp(Timestamp timestamp) {
         if (timestamp == null) {
             return "";
         }
-        return timestampFormat.format(timestamp.toDate());
+        return TIMESTAMP_FORMAT.format(timestamp.toDate());
     }
 
     static class BelayerPostViewHolder extends RecyclerView.ViewHolder {

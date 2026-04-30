@@ -7,40 +7,50 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class BlogPostAdapter extends RecyclerView.Adapter<BlogPostAdapter.BlogPostViewHolder> {
+public class BlogPostAdapter extends ListAdapter<BlogPost, BlogPostAdapter.BlogPostViewHolder> {
+    private static final DiffUtil.ItemCallback<BlogPost> DIFF_CALLBACK = new DiffUtil.ItemCallback<BlogPost>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull BlogPost oldItem, @NonNull BlogPost newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull BlogPost oldItem, @NonNull BlogPost newItem) {
+            return Objects.equals(oldItem.getTitle(), newItem.getTitle())
+                    && Objects.equals(oldItem.getBody(), newItem.getBody())
+                    && Objects.equals(oldItem.getCreatedAt(), newItem.getCreatedAt());
+        }
+    };
+
     public interface ActionListener {
         void onDeletePost(BlogPost post);
 
         void onViewProfile(BlogPost post);
     }
 
-    private final List<BlogPost> posts = new ArrayList<>();
+    private static final SimpleDateFormat TIMESTAMP_FORMAT =
+            new SimpleDateFormat("EEE d MMM yyyy, HH:mm", Locale.getDefault());
     private final LayoutInflater layoutInflater;
     private final ActionListener actionListener;
     private final String currentUserUid;
-    private final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("EEE d MMM yyyy, HH:mm", Locale.getDefault());
 
     public BlogPostAdapter(LayoutInflater layoutInflater, ActionListener actionListener, String currentUserUid) {
+        super(DIFF_CALLBACK);
         this.layoutInflater = layoutInflater;
         this.actionListener = actionListener;
         this.currentUserUid = currentUserUid;
-    }
-
-    public void submitPosts(List<BlogPost> blogPosts) {
-        posts.clear();
-        posts.addAll(blogPosts);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -52,7 +62,7 @@ public class BlogPostAdapter extends RecyclerView.Adapter<BlogPostAdapter.BlogPo
 
     @Override
     public void onBindViewHolder(@NonNull BlogPostViewHolder holder, int position) {
-        BlogPost post = posts.get(position);
+        BlogPost post = getItem(position);
         holder.tvBlogTitle.setText(TextUtils.isEmpty(post.getTitle()) ? "" : post.getTitle());
         holder.tvBlogAuthor.setText(TextUtils.isEmpty(post.getAuthorName())
                 ? holder.itemView.getContext().getString(R.string.unknown_user)
@@ -68,16 +78,11 @@ public class BlogPostAdapter extends RecyclerView.Adapter<BlogPostAdapter.BlogPo
         holder.btnDeleteBlogPost.setOnClickListener(view -> actionListener.onDeletePost(post));
     }
 
-    @Override
-    public int getItemCount() {
-        return posts.size();
-    }
-
     private String formatTimestamp(Timestamp timestamp) {
         if (timestamp == null) {
             return "";
         }
-        return timestampFormat.format(timestamp.toDate());
+        return TIMESTAMP_FORMAT.format(timestamp.toDate());
     }
 
     static class BlogPostViewHolder extends RecyclerView.ViewHolder {
