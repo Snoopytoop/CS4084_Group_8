@@ -49,6 +49,9 @@ public class UserProfileActivity extends AppCompatActivity {
     private TextView tvUsername;
     private TextView tvEmail;
     private TextView tvBio;
+    private TextView tvStatPosts;
+    private TextView tvStatRoutes;
+    private TextView tvStatSpeedwall;
     private ImageButton btnSettings;
     private ImageButton btnNavHome;
     private ImageButton btnNavSearch;
@@ -75,6 +78,9 @@ public class UserProfileActivity extends AppCompatActivity {
         tvUsername = findViewById(R.id.tvUsername);
         tvEmail = findViewById(R.id.tvEmail);
         tvBio = findViewById(R.id.tvBio);
+        tvStatPosts = findViewById(R.id.tvStatPosts);
+        tvStatRoutes = findViewById(R.id.tvStatRoutes);
+        tvStatSpeedwall = findViewById(R.id.tvStatSpeedwall);
         btnSettings = findViewById(R.id.btnSettings);
         btnNavHome = findViewById(R.id.btnNavHome);
         btnNavSearch = findViewById(R.id.btnNavSearch);
@@ -213,8 +219,9 @@ public class UserProfileActivity extends AppCompatActivity {
                         ivProfile.setImageResource(R.drawable.ic_person);
                     }
 
-                    // Load THAT user's posts
+                    // Load THAT user's posts and stats
                     listenForMyPosts(targetUserId);
+                    loadStats(targetUserId);
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
@@ -274,6 +281,40 @@ public class UserProfileActivity extends AppCompatActivity {
         intent.putExtra(ChatActivity.EXTRA_OTHER_USER_ID, viewedUserId);
         intent.putExtra(ChatActivity.EXTRA_OTHER_USER_NAME, viewedUsername);
         startActivity(intent);
+    }
+
+    private void loadStats(String uid) {
+        firestore.collection("posts")
+                .whereEqualTo("authorUid", uid)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (tvStatPosts != null) tvStatPosts.setText(String.valueOf(snap.size()));
+                });
+
+        firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                .whereEqualTo("authorUid", uid)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (tvStatRoutes != null) tvStatRoutes.setText(String.valueOf(snap.size()));
+                });
+
+        firestore.collection(FirestoreCollections.LEADERBOARD)
+                .whereEqualTo("uid", uid)
+                .orderBy("totalMs", Query.Direction.ASCENDING)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (tvStatSpeedwall == null) return;
+                    if (snap.isEmpty()) {
+                        tvStatSpeedwall.setText("--");
+                        return;
+                    }
+                    Long seconds = snap.getDocuments().get(0).getLong("seconds");
+                    Long ms = snap.getDocuments().get(0).getLong("milliseconds");
+                    if (seconds == null) seconds = 0L;
+                    if (ms == null) ms = 0L;
+                    tvStatSpeedwall.setText(seconds + "." + String.format("%03d", ms) + "s");
+                });
     }
 
     private void listenForMyPosts(String uid) {
