@@ -22,11 +22,11 @@ import java.util.List;
 import java.util.Locale;
 
 public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdapter.DirectMessageViewHolder> {
+    private static final SimpleDateFormat TIMESTAMP_FORMAT =
+            new SimpleDateFormat("HH:mm", Locale.getDefault());
     private final List<DirectMessage> messages = new ArrayList<>();
     private final LayoutInflater layoutInflater;
     private final String currentUserUid;
-    private final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("HH:mm", Locale.getDefault());
 
     public DirectMessageAdapter(LayoutInflater layoutInflater, String currentUserUid) {
         this.layoutInflater = layoutInflater;
@@ -102,7 +102,7 @@ public class DirectMessageAdapter extends RecyclerView.Adapter<DirectMessageAdap
         if (timestamp == null) {
             return "";
         }
-        return timestampFormat.format(timestamp.toDate());
+        return TIMESTAMP_FORMAT.format(timestamp.toDate());
     }
 
     static class DirectMessageViewHolder extends RecyclerView.ViewHolder {
