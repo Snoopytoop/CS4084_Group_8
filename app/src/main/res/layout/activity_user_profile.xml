@@ -22,7 +22,7 @@
         android:layout_height="40dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Profile settings"
-        android:src="@android:drawable/ic_menu_manage"
+        android:src="@drawable/ic_edit"
         app:layout_constraintBottom_toBottomOf="@id/tvProfileTitle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvProfileTitle" />

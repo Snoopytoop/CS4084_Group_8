@@ -49,7 +49,7 @@
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Profile settings"
-                    android:src="@android:drawable/ic_menu_manage" />
+                    android:src="@drawable/ic_edit" />
             </LinearLayout>
 
             <LinearLayout
