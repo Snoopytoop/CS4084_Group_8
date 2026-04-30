@@ -47,9 +47,9 @@ public class HomeActivity extends AppCompatActivity {
     private ShapeableImageView ivNavProfile;
     private ImageButton btnNavCreatePost;
     private ImageButton btnNavSearch;
-    private ImageButton btnNavLeaderboard;
+    private ImageButton btnNavMessages;
     private MaterialButton btnQuickRouteLog;
-    private MaterialButton btnQuickMessages;
+    private MaterialButton btnQuickLeaderboard;
     private MaterialButton btnQuickFindBelayer;
     private MaterialButton btnQuickBlogs;
     private MaterialButton btnRetryConnection;
@@ -73,11 +73,11 @@ public class HomeActivity extends AppCompatActivity {
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         btnNavSearch = findViewById(R.id.btnNavSearch);
-        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        btnNavMessages = findViewById(R.id.btnNavMessages);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         btnQuickRouteLog = findViewById(R.id.btnQuickRouteLog);
-        btnQuickMessages = findViewById(R.id.btnQuickMessages);
+        btnQuickLeaderboard = findViewById(R.id.btnQuickLeaderboard);
         btnQuickFindBelayer = findViewById(R.id.btnQuickFindBelayer);
         btnQuickBlogs = findViewById(R.id.btnQuickBlogs);
         btnRetryConnection = findViewById(R.id.btnRetryConnection);
@@ -109,11 +109,11 @@ public class HomeActivity extends AppCompatActivity {
             // Already on home.
         });
         btnNavSearch.setOnClickListener(v -> openServerFeature(SearchActivity.class));
-        btnNavLeaderboard.setOnClickListener(v -> openServerFeature(LeaderboardActivity.class));
+        btnNavMessages.setOnClickListener(v -> openMessagesFeature());
         ivNavProfile.setOnClickListener(v -> openServerFeature(UserProfileActivity.class));
         btnNavCreatePost.setOnClickListener(v -> openServerFeature(CreatePostActivity.class));
         btnQuickRouteLog.setOnClickListener(v -> startActivity(new Intent(this, RouteLogActivity.class)));
-        btnQuickMessages.setOnClickListener(v -> openMessagesFeature());
+        btnQuickLeaderboard.setOnClickListener(v -> openServerFeature(LeaderboardActivity.class));
         btnQuickFindBelayer.setOnClickListener(v -> openServerFeature(FindBelayerActivity.class));
         btnQuickBlogs.setOnClickListener(v -> openServerFeature(BlogsActivity.class));
         btnRetryConnection.setOnClickListener(v -> retryOnlineConnection());
@@ -329,24 +329,24 @@ public class HomeActivity extends AppCompatActivity {
 
     private void enableOfflineUi() {
         setBlockedUiState(btnNavSearch);
-        setBlockedUiState(btnNavLeaderboard);
+        setBlockedUiState(btnNavMessages);
         setBlockedUiState(btnNavCreatePost);
         setBlockedUiState(btnQuickFindBelayer);
         setBlockedUiState(btnQuickBlogs);
         setBlockedUiState(ivNavProfile);
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-            setDisabledUiState(btnQuickMessages);
+            setDisabledUiState(btnQuickLeaderboard);
         } else {
-            setEnabledUiState(btnQuickMessages);
+            setEnabledUiState(btnQuickLeaderboard);
         }
     }
 
     private void enableOnlineUi() {
         setEnabledUiState(btnNavSearch);
-        setEnabledUiState(btnNavLeaderboard);
+        setEnabledUiState(btnNavMessages);
         setEnabledUiState(btnNavCreatePost);
-        setEnabledUiState(btnQuickMessages);
+        setEnabledUiState(btnQuickLeaderboard);
         setEnabledUiState(btnQuickFindBelayer);
         setEnabledUiState(btnQuickBlogs);
         setEnabledUiState(ivNavProfile);
@@ -599,9 +599,9 @@ public class HomeActivity extends AppCompatActivity {
         tvEmptyFeed.setText("Please log in to view and create posts.");
         tvEmptyFeed.setVisibility(View.VISIBLE);
         setDisabledUiState(btnNavSearch);
-        setDisabledUiState(btnNavLeaderboard);
+        setDisabledUiState(btnNavMessages);
         setDisabledUiState(btnNavCreatePost);
-        setDisabledUiState(btnQuickMessages);
+        setDisabledUiState(btnQuickLeaderboard);
         setDisabledUiState(btnQuickFindBelayer);
         setDisabledUiState(btnQuickBlogs);
         setDisabledUiState(ivNavProfile);

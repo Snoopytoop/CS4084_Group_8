@@ -115,7 +115,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
@@ -127,8 +127,8 @@ public class CreatePostActivity extends AppCompatActivity {
             startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavCreatePost.setOnClickListener(v -> {

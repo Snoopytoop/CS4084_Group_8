@@ -95,7 +95,7 @@ public class SearchActivity extends AppCompatActivity {
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
@@ -109,9 +109,8 @@ public class SearchActivity extends AppCompatActivity {
             // Already here
         });
 
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
-            finish();
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
             overridePendingTransition(0, 0);
         });
 

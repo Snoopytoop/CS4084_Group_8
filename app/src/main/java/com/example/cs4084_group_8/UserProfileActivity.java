@@ -56,7 +56,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private ImageButton btnNavHome;
     private ImageButton btnNavSearch;
     private ImageButton btnNavCreatePost;
-    private ImageButton btnNavLeaderboard;
+    private ImageButton btnNavMessages;
     private ShapeableImageView ivNavProfile;
     private RecyclerView rvMyPosts;
     private TextView tvEmptyMyPosts;
@@ -85,7 +85,7 @@ public class UserProfileActivity extends AppCompatActivity {
         btnNavHome = findViewById(R.id.btnNavHome);
         btnNavSearch = findViewById(R.id.btnNavSearch);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
-        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        btnNavMessages = findViewById(R.id.btnNavMessages);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         rvMyPosts = findViewById(R.id.rvMyPosts);
         tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
@@ -125,8 +125,8 @@ public class UserProfileActivity extends AppCompatActivity {
             startActivity(new Intent(this, CreatePostActivity.class));
             overridePendingTransition(0, 0);
         });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
