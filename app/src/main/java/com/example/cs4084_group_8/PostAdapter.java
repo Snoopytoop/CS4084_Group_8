@@ -9,35 +9,45 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder> {
+public class PostAdapter extends ListAdapter<Post, PostAdapter.PostViewHolder> {
+    private static final DiffUtil.ItemCallback<Post> DIFF_CALLBACK = new DiffUtil.ItemCallback<Post>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Post oldItem, @NonNull Post newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Post oldItem, @NonNull Post newItem) {
+            return oldItem.getLikesCount() == newItem.getLikesCount()
+                    && oldItem.getCommentsCount() == newItem.getCommentsCount()
+                    && Objects.equals(oldItem.getLikedBy(), newItem.getLikedBy());
+        }
+    };
+
     public interface PostActionListener {
         void onLikeClick(Post post);
 
         void onCommentClick(Post post);
     }
 
-    private final List<Post> posts = new ArrayList<>();
     private final String currentUserUid;
     private final PostActionListener listener;
 
     public PostAdapter(String currentUserUid, PostActionListener listener) {
+        super(DIFF_CALLBACK);
         this.currentUserUid = currentUserUid;
         this.listener = listener;
-    }
-
-    public void submitList(List<Post> newPosts) {
-        posts.clear();
-        posts.addAll(newPosts);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -49,7 +59,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
-        Post post = posts.get(position);
+        Post post = getItem(position);
 
         holder.tvPostAuthor.setText(TextUtils.isEmpty(post.getAuthorName())
                 ? holder.itemView.getContext().getString(R.string.unknown_user)
@@ -97,11 +107,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
         holder.btnLike.setOnClickListener(v -> listener.onLikeClick(post));
         holder.btnComment.setOnClickListener(v -> listener.onCommentClick(post));
-    }
-
-    @Override
-    public int getItemCount() {
-        return posts.size();
     }
 
     static class PostViewHolder extends RecyclerView.ViewHolder {
