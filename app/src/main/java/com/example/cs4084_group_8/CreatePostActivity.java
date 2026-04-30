@@ -208,6 +208,11 @@ public class CreatePostActivity extends AppCompatActivity {
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    if (snapshot == null || !snapshot.exists()) {
+                        setLoading(false);
+                        Toast.makeText(this, "User profile not found", Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     String authorName = snapshot.getString("username");
                     String authorProfileImageUrl = snapshot.getString("profileImageUrl");
 
