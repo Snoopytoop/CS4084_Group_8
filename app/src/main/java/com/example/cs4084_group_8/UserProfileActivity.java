@@ -231,8 +231,10 @@ public class UserProfileActivity extends AppCompatActivity {
                     listenForMyPosts(targetUserId);
                     loadStats(targetUserId);
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                .addOnFailureListener(e -> {
+                    if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+                    Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 
     private void resolveCurrentUserRole() {
@@ -376,6 +378,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 .whereEqualTo("authorUid", uid)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(this, "Failed to load posts: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -540,6 +543,14 @@ public class UserProfileActivity extends AppCompatActivity {
                 return true;
             }
             if (item.getItemId() == MENU_LOGOUT_ID) {
+                if (myPostsListener != null) {
+                    myPostsListener.remove();
+                    myPostsListener = null;
+                }
+                if (leaderboardListener != null) {
+                    leaderboardListener.remove();
+                    leaderboardListener = null;
+                }
                 OfflineSessionManager.disableOfflineMode(this);
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(this, MainActivity.class));

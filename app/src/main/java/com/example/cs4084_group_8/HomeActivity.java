@@ -176,6 +176,7 @@ public class HomeActivity extends AppCompatActivity {
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(this, "Failed to load posts: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -217,8 +218,10 @@ public class HomeActivity extends AppCompatActivity {
                     transaction.update(postRef, "likesCount", updatedLikes);
                     return null;
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to update like: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                .addOnFailureListener(e -> {
+                    if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+                    Toast.makeText(this, "Failed to update like: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 
     private void showCommentDialog(Post post) {
