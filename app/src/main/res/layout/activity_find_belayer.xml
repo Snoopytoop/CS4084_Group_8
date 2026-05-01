@@ -171,44 +171,53 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilBelayerDays"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSelectDays"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_height="48dp"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="1"
-                        android:hint="@string/find_belayer_days_hint">
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/find_belayer_days_hint"
+                        android:textColor="@color/route_log_text_primary"
+                        app:cornerRadius="0dp" />
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etBelayerDays"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:textColor="@color/route_log_text_primary" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilBelayerTimes"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSelectTimes"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_height="48dp"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        android:hint="@string/find_belayer_times_hint">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etBelayerTimes"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:textColor="@color/route_log_text_primary" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/find_belayer_times_hint"
+                        android:textColor="@color/route_log_text_primary"
+                        app:cornerRadius="0dp" />
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvSelectedDays"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvSelectedTimes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilBelayerCapability"
@@ -266,6 +275,96 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="@string/find_belayer_add_post_button" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardBackgroundColor="@color/route_log_card_bg"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="@color/route_log_badge_bg"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/find_belayer_filter_title"
+                    android:textColor="@color/route_log_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/find_belayer_filter_subtitle"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFilterDays"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/find_belayer_filter_days_label"
+                        android:textColor="@color/route_log_text_primary"
+                        app:cornerRadius="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFilterTimes"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/find_belayer_filter_times_label"
+                        android:textColor="@color/route_log_text_primary"
+                    app:cornerRadius="0dp" />
+
+                <TextView
+                    android:id="@+id/tvFilterStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/find_belayer_no_filter"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearFilters"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/find_belayer_filter_clear"
+                            android:textColor="@color/route_log_text_primary"
+                        app:cornerRadius="0dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnApplyFilters"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/find_belayer_filter_apply"
+                            android:textColor="@color/route_log_text_primary"
+                        app:cornerRadius="0dp" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

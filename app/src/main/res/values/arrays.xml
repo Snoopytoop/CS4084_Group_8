@@ -13,4 +13,23 @@
         <item>Lead + top-rope belay</item>
         <item>New to belaying</item>
     </string-array>
+
+    <string-array name="days_of_week">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+
+    <string-array name="time_periods">
+        <item>Early morning (6:00 - 9:00)</item>
+        <item>Morning (9:00 - 12:00)</item>
+        <item>Afternoon (12:00 - 15:00)</item>
+        <item>Evening (15:00 - 18:00)</item>
+        <item>Night (18:00 - 21:00)</item>
+        <item>Late night (21:00 - 24:00)</item>
+    </string-array>
 </resources>
