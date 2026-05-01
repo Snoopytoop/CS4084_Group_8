@@ -193,13 +193,13 @@ public class InboxActivity extends AppCompatActivity {
                     String searchText = etInboxSearch != null && etInboxSearch.getText() != null
                             ? etInboxSearch.getText().toString().trim() : "";
                     if (searchText.isEmpty()) {
-                        conversationSummaryAdapter.submitConversations(allConversations);
+                        conversationSummaryAdapter.submitList(allConversations);
                         boolean hasConversations = !allConversations.isEmpty();
                         rvInboxConversations.setVisibility(hasConversations ? RecyclerView.VISIBLE : RecyclerView.GONE);
                         tvInboxEmpty.setVisibility(hasConversations ? TextView.GONE : TextView.VISIBLE);
                         if (!hasConversations) tvInboxEmpty.setText(R.string.inbox_empty_state);
                     } else {
-                        conversationSummaryAdapter.submitConversations(allConversations);
+                        conversationSummaryAdapter.submitList(allConversations);
                     }
                 });
     }

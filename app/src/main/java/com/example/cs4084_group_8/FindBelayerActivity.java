@@ -312,7 +312,7 @@ public class FindBelayerActivity extends AppCompatActivity {
                             Comparator.nullsLast(Comparator.naturalOrder())
                     ).reversed());
 
-                    belayerPostAdapter.submitPosts(posts);
+                    belayerPostAdapter.submitList(posts);
                     updateSummary(posts);
 
                     boolean hasPosts = !posts.isEmpty();

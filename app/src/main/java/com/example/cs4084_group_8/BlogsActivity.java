@@ -238,7 +238,7 @@ public class BlogsActivity extends AppCompatActivity {
                         }
                     });
 
-                    blogPostAdapter.submitPosts(blogs);
+                    blogPostAdapter.submitList(blogs);
                     rvBlogs.setVisibility(blogs.isEmpty() ? View.GONE : View.VISIBLE);
                     tvBlogsEmptyState.setVisibility(blogs.isEmpty() ? View.VISIBLE : View.GONE);
                     if (blogs.isEmpty()) {

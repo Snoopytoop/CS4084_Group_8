@@ -289,7 +289,7 @@ public class RouteLogActivity extends AppCompatActivity {
                 RouteLogEntry::getSortTimestampMillis
                     ).reversed());
 
-                    routeLogAdapter.submitEntries(entries);
+                    routeLogAdapter.submitList(entries);
                     updateSummary(entries);
 
                     boolean hasEntries = !entries.isEmpty();
@@ -303,7 +303,7 @@ public class RouteLogActivity extends AppCompatActivity {
 
     private void loadLocalRouteHistory() {
         List<RouteLogEntry> entries = RouteLogStore.loadEntries(this, sessionIdentity.getUid());
-        routeLogAdapter.submitEntries(entries);
+        routeLogAdapter.submitList(entries);
         updateSummary(entries);
 
         boolean hasEntries = !entries.isEmpty();
