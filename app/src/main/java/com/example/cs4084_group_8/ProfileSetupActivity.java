@@ -179,6 +179,7 @@ public class ProfileSetupActivity extends AppCompatActivity {
 
     private void persistProfile(FirebaseUser currentUser, String bio, String profileImageUrl) {
         Map<String, Object> updates = new HashMap<>();
+        updates.put("uid", currentUser.getUid());
         updates.put("bio", bio);
         updates.put("profileImageUrl", profileImageUrl);
         updates.put("profileCompleted", true);
@@ -198,6 +199,7 @@ public class ProfileSetupActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
+                    Log.e(TAG, "Failed to save profile for uid=" + currentUser.getUid(), e);
                     Toast.makeText(this, "Failed to save profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
@@ -222,13 +224,18 @@ public class ProfileSetupActivity extends AppCompatActivity {
     }
 
     private void loadImageFromStorageUrl(String imageUrl) {
-        firebaseStorage.getReferenceFromUrl(imageUrl)
-                .getBytes(MAX_IMAGE_BYTES)
-                .addOnSuccessListener(bytes -> {
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                    ivProfile.setImageBitmap(bitmap);
-                })
-                .addOnFailureListener(e -> ivProfile.setImageResource(android.R.drawable.ic_menu_camera));
+        try {
+            firebaseStorage.getReferenceFromUrl(imageUrl)
+                    .getBytes(MAX_IMAGE_BYTES)
+                    .addOnSuccessListener(bytes -> {
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        ivProfile.setImageBitmap(bitmap);
+                    })
+                    .addOnFailureListener(e -> ivProfile.setImageResource(android.R.drawable.ic_menu_camera));
+        } catch (Exception e) {
+            Log.w(TAG, "Invalid profile image URL: " + imageUrl);
+            ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
+        }
     }
 
     private void setLoading(boolean loading) {
