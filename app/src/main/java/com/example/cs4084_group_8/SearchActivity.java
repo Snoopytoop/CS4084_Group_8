@@ -10,7 +10,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,20 +26,17 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SearchActivity extends AppCompatActivity {
-    private TextInputEditText etSearch;
-    private RecyclerView rvSearchResults;
     private TextView tvNoResults;
     private ShapeableImageView ivNavProfile;
 
     private FirebaseFirestore firestore;
     private UserSearchAdapter adapter;
-    private List<User> userList = new ArrayList<>();
+    private final List<User> userList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,8 +50,8 @@ public class SearchActivity extends AppCompatActivity {
 
         firestore = FirebaseFirestore.getInstance();
 
-        etSearch = findViewById(R.id.etSearch);
-        rvSearchResults = findViewById(R.id.rvSearchResults);
+        TextInputEditText etSearch = findViewById(R.id.etSearch);
+        RecyclerView rvSearchResults = findViewById(R.id.rvSearchResults);
         tvNoResults = findViewById(R.id.tvNoResults);
         
         setupNavigation();
@@ -140,7 +136,6 @@ public class SearchActivity extends AppCompatActivity {
             return;
         }
 
-        // Firestore simple search: prefix search using \uf8ff
         firestore.collection("users")
                 .orderBy("username")
                 .startAt(queryText)
@@ -153,7 +148,7 @@ public class SearchActivity extends AppCompatActivity {
                         queryDocumentSnapshots.getDocuments().forEach(doc -> {
                             User user = doc.toObject(User.class);
                             if (user != null) {
-                                user.setUid(doc.getId()); // Ensure UID is set from document ID
+                                user.setUid(doc.getId());
                                 userList.add(user);
                             }
                         });
@@ -183,14 +178,13 @@ public class SearchActivity extends AppCompatActivity {
         });
     }
 
-    // Inner Adapter Class
-    private static class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.ViewHolder> {
+    private interface OnUserClickListener {
+        void onUserClick(User user);
+    }
+
+    private class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.ViewHolder> {
         private final List<User> users;
         private final OnUserClickListener listener;
-
-        interface OnUserClickListener {
-            void onUserClick(User user);
-        }
 
         UserSearchAdapter(List<User> users, OnUserClickListener listener) {
             this.users = users;
@@ -201,7 +195,11 @@ public class SearchActivity extends AppCompatActivity {
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
-            return new ViewHolder(view);
+            ViewHolder vh = new ViewHolder(view);
+            vh.text1.setTextColor(getResources().getColor(R.color.route_log_text_primary, getTheme()));
+            vh.text2.setTextColor(getResources().getColor(R.color.route_log_text_secondary, getTheme()));
+            view.setPadding(48, 32, 48, 32);
+            return vh;
         }
 
         @Override
@@ -217,7 +215,7 @@ public class SearchActivity extends AppCompatActivity {
             return users.size();
         }
 
-        static class ViewHolder extends RecyclerView.ViewHolder {
+        class ViewHolder extends RecyclerView.ViewHolder {
             TextView text1, text2;
             ViewHolder(View itemView) {
                 super(itemView);
@@ -227,7 +225,6 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
-    // Temporary User class if not already defined (or matches Firestore)
     public static class User {
         private String uid;
         private String username;
@@ -239,7 +236,10 @@ public class SearchActivity extends AppCompatActivity {
         public String getUid() { return uid; }
         public void setUid(String uid) { this.uid = uid; }
         public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
         public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
         public String getProfileImageUrl() { return profileImageUrl; }
+        public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
     }
 }
