@@ -12,6 +12,8 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -59,6 +61,7 @@ public class InboxActivity extends AppCompatActivity {
         configureList();
         configureSearch();
         setupNavigation();
+        configureBottomNavInsets();
     }
 
     @Override
@@ -126,6 +129,17 @@ public class InboxActivity extends AppCompatActivity {
             startActivity(new Intent(this, UserProfileActivity.class));
             finish();
             overridePendingTransition(0, 0);
+        });
+    }
+
+    private void configureBottomNavInsets() {
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
         });
     }
 
