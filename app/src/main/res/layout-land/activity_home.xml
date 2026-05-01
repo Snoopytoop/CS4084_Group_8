@@ -81,7 +81,7 @@
                     android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnQuickMessages"
+                    android:id="@+id/btnQuickLeaderboard"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -90,7 +90,7 @@
                     android:layout_weight="1"
                     android:minHeight="64dp"
                     android:padding="4dp"
-                    android:text="@string/home_messages_button"
+                    android:text="Leaderboard"
                     android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
