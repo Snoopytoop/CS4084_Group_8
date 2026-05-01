@@ -64,9 +64,9 @@
                     android:id="@+id/ivProfile"
                     android:layout_width="96dp"
                     android:layout_height="96dp"
-                    android:background="@android:color/darker_gray"
+                    android:background="@android:color/transparent"
                     android:contentDescription="Profile image"
-                    android:padding="16dp"
+                    android:padding="0dp"
                     android:scaleType="centerCrop"
                     android:src="@android:drawable/ic_menu_camera" />
 
