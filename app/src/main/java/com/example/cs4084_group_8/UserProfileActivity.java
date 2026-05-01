@@ -43,6 +43,7 @@ import java.util.Map;
 public class UserProfileActivity extends AppCompatActivity {
     private static final int MENU_EDIT_PROFILE_ID = 1001;
     private static final int MENU_LOGOUT_ID = 1002;
+    private static final int MENU_BACK_TO_ADMIN_DASHBOARD_ID = 1003;
     private static final String PROFILE_CACHE_PREF = "profile_cache";
     private static final String PROFILE_IMAGE_URL_PREFIX = "profile_image_url_";
 
@@ -70,6 +71,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private ListenerRegistration leaderboardListener;
     private String viewedUserId = "";
     private String viewedUsername = "";
+    private boolean isCurrentUserAdmin = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,6 +160,7 @@ public class UserProfileActivity extends AppCompatActivity {
         super.onStart();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {
+            resolveCurrentUserRole();
             loadNavProfileImage(currentUser.getUid(), ivNavProfile);
         }
         loadUserProfile();
@@ -197,14 +200,13 @@ public class UserProfileActivity extends AppCompatActivity {
             // Viewing your own profile
             tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
             tvEmail.setVisibility(View.VISIBLE);
-            btnSettings.setVisibility(View.VISIBLE); // show settings
             btnMessageUser.setVisibility(View.GONE);
         } else {
             // Viewing someone else's profile
             tvEmail.setVisibility(View.GONE);
-            btnSettings.setVisibility(View.GONE); // hide settings
             btnMessageUser.setVisibility(View.VISIBLE);
         }
+        updateSettingsButtonVisibility();
 
         // Load user data from Firestore
         firestore.collection("users")
@@ -231,6 +233,34 @@ public class UserProfileActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void resolveCurrentUserRole() {
+        if (currentUser == null) {
+            isCurrentUserAdmin = false;
+            updateSettingsButtonVisibility();
+            return;
+        }
+        firestore.collection(FirestoreCollections.USERS)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    isCurrentUserAdmin = AuthRoles.ADMIN.equalsIgnoreCase(role);
+                    updateSettingsButtonVisibility();
+                })
+                .addOnFailureListener(e -> {
+                    isCurrentUserAdmin = false;
+                    updateSettingsButtonVisibility();
+                });
+    }
+
+    private void updateSettingsButtonVisibility() {
+        boolean isViewingOwnProfile = currentUser != null
+                && !TextUtils.isEmpty(viewedUserId)
+                && TextUtils.equals(viewedUserId, currentUser.getUid());
+        boolean shouldShowSettings = isViewingOwnProfile || isCurrentUserAdmin;
+        btnSettings.setVisibility(shouldShowSettings ? View.VISIBLE : View.GONE);
     }
 
     private void loadNavProfileImage(String uid, ImageView targetView) {
@@ -483,12 +513,29 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private void showSettingsMenu() {
         PopupMenu popupMenu = new PopupMenu(this, btnSettings);
-        popupMenu.getMenu().add(0, MENU_EDIT_PROFILE_ID, 0, "Edit profile");
-        popupMenu.getMenu().add(0, MENU_LOGOUT_ID, 1, "Logout");
+        boolean isViewingOwnProfile = currentUser != null
+                && !TextUtils.isEmpty(viewedUserId)
+                && TextUtils.equals(viewedUserId, currentUser.getUid());
+
+        int order = 0;
+        if (isViewingOwnProfile) {
+            popupMenu.getMenu().add(0, MENU_EDIT_PROFILE_ID, order++, "Edit profile");
+        }
+        if (isCurrentUserAdmin) {
+            popupMenu.getMenu().add(0, MENU_BACK_TO_ADMIN_DASHBOARD_ID, order++, "Back to Admin Dashboard");
+        }
+        popupMenu.getMenu().add(0, MENU_LOGOUT_ID, order, "Logout");
+
         popupMenu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_EDIT_PROFILE_ID) {
                 Intent intent = new Intent(this, ProfileSetupActivity.class);
                 intent.putExtra("fromProfile", true);
+                startActivity(intent);
+                return true;
+            }
+            if (item.getItemId() == MENU_BACK_TO_ADMIN_DASHBOARD_ID) {
+                Intent intent = new Intent(this, AdminDashboardActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 startActivity(intent);
                 return true;
             }
