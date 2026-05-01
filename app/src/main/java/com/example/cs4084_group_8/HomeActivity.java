@@ -419,7 +419,15 @@ public class HomeActivity extends AppCompatActivity {
         currentUser = user;
 
         if (isForcedOfflineSession()) {
-            Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+            if (!NetworkStatus.isOnline(this)) {
+                Toast.makeText(this, R.string.home_retry_still_offline, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            OfflineSessionManager.disableOfflineMode(this);
+            Toast.makeText(this, R.string.home_retry_sign_in_required, Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
             return;
         }
 

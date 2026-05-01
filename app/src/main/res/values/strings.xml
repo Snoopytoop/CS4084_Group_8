@@ -19,6 +19,7 @@
     <string name="home_checking_connection">Checking server connection. Features will unlock once confirmed.</string>
     <string name="home_retry_still_offline">Still offline. Check your connection and try again.</string>
     <string name="home_retry_online_success">Connection restored. Refreshing online features.</string>
+    <string name="home_retry_sign_in_required">Connection restored. Please sign in to go online.</string>
     <string name="home_retry_already_online">You are already online.</string>
     <string name="home_loading_posts">Loading posts...</string>
     <string name="home_title">ClimbShare</string>
