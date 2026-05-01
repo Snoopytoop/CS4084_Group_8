@@ -8,13 +8,17 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -31,6 +35,7 @@ public class InboxActivity extends AppCompatActivity {
     private RecyclerView rvInboxConversations;
     private RecyclerView rvUserSearch;
     private TextInputEditText etInboxSearch;
+    private ShapeableImageView ivNavProfile;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
@@ -55,6 +60,8 @@ public class InboxActivity extends AppCompatActivity {
         configureToolbar();
         configureList();
         configureSearch();
+        setupNavigation();
+        configureBottomNavInsets();
     }
 
     @Override
@@ -86,8 +93,54 @@ public class InboxActivity extends AppCompatActivity {
     }
 
     private void configureToolbar() {
-        toolbarInbox.setNavigationIcon(R.drawable.ic_route_back);
-        toolbarInbox.setNavigationOnClickListener(view -> finish());
+        toolbarInbox.setNavigationIcon(null);
+    }
+
+    private void setupNavigation() {
+        ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
+        ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
+        ivNavProfile = findViewById(R.id.ivNavProfile);
+
+        btnNavHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, HomeActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        btnNavMessages.setOnClickListener(v -> {
+            // Already on messages landing page.
+        });
+
+        btnNavCreatePost.setOnClickListener(v -> {
+            startActivity(new Intent(this, CreatePostActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        ivNavProfile.setOnClickListener(v -> {
+            startActivity(new Intent(this, UserProfileActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+    }
+
+    private void configureBottomNavInsets() {
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
+        });
     }
 
     private void configureList() {

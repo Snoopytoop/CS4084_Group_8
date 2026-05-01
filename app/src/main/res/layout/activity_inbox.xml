@@ -1,31 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/route_log_screen_bg"
-    android:orientation="vertical">
+    android:padding="24dp">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbarInbox"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/route_log_card_bg"
         android:minHeight="?attr/actionBarSize"
         android:title="@string/inbox_title"
         android:titleTextColor="@color/route_log_text_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:subtitle="@string/inbox_subtitle"
         app:subtitleTextColor="@color/route_log_text_secondary" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilInboxSearch"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="12dp"
         android:layout_marginBottom="4dp"
         android:hint="Search users"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbarInbox"
         app:startIconDrawable="@drawable/ic_search"
         app:startIconTint="@color/route_log_text_secondary">
 
@@ -39,8 +45,13 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <FrameLayout
+        android:id="@+id/inboxContentContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tilInboxSearch">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvInboxConversations"
@@ -68,4 +79,12 @@
             android:textSize="14sp" />
     </FrameLayout>
 
-</LinearLayout>
+    <include
+        layout="@layout/bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
