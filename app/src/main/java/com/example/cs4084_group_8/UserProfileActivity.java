@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class UserProfileActivity extends AppCompatActivity {
@@ -66,6 +67,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private FirebaseUser currentUser;
     private PostAdapter postAdapter;
     private ListenerRegistration myPostsListener;
+    private ListenerRegistration leaderboardListener;
     private String viewedUserId = "";
     private String viewedUsername = "";
 
@@ -167,6 +169,10 @@ public class UserProfileActivity extends AppCompatActivity {
         if (myPostsListener != null) {
             myPostsListener.remove();
             myPostsListener = null;
+        }
+        if (leaderboardListener != null) {
+            leaderboardListener.remove();
+            leaderboardListener = null;
         }
     }
 
@@ -298,22 +304,37 @@ public class UserProfileActivity extends AppCompatActivity {
                     if (tvStatRoutes != null) tvStatRoutes.setText(String.valueOf(snap.size()));
                 });
 
-        firestore.collection(FirestoreCollections.LEADERBOARD)
+        if (leaderboardListener != null) {
+            leaderboardListener.remove();
+        }
+        leaderboardListener = firestore.collection(FirestoreCollections.LEADERBOARD)
                 .whereEqualTo("uid", uid)
-                .orderBy("totalMs", Query.Direction.ASCENDING)
-                .limit(1)
-                .get()
-                .addOnSuccessListener(snap -> {
+                .addSnapshotListener((value, error) -> {
                     if (tvStatSpeedwall == null) return;
-                    if (snap.isEmpty()) {
+                    if (error != null || value == null || value.isEmpty()) {
                         tvStatSpeedwall.setText("--");
                         return;
                     }
-                    Long seconds = snap.getDocuments().get(0).getLong("seconds");
-                    Long ms = snap.getDocuments().get(0).getLong("milliseconds");
-                    if (seconds == null) seconds = 0L;
-                    if (ms == null) ms = 0L;
-                    tvStatSpeedwall.setText(seconds + "." + String.format("%03d", ms) + "s");
+
+                    long minTotalMs = Long.MAX_VALUE;
+                    LeaderboardEntry bestEntry = null;
+
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                        LeaderboardEntry entry = doc.toObject(LeaderboardEntry.class);
+                        if (entry != null) {
+                            if (entry.getTotalMs() > 0 && entry.getTotalMs() < minTotalMs) {
+                                minTotalMs = entry.getTotalMs();
+                                bestEntry = entry;
+                            }
+                        }
+                    }
+
+                    if (bestEntry != null) {
+                        tvStatSpeedwall.setText(String.format(Locale.getDefault(), "%d.%03ds",
+                                bestEntry.getSeconds(), bestEntry.getMilliseconds()));
+                    } else {
+                        tvStatSpeedwall.setText("--");
+                    }
                 });
     }
 
