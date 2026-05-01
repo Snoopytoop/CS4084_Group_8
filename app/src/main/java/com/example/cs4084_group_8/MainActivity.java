@@ -292,6 +292,8 @@ public class MainActivity extends AppCompatActivity {
         userProfile.put("uid", currentUser.getUid());
         userProfile.put("email", email);
         userProfile.put("username", fallbackUsername);
+        userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
+        userProfile.put(FIELD_PROFILE_COMPLETED, profileCompleted);
         userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
         firebaseFirestore.collection(FirestoreCollections.USERS)

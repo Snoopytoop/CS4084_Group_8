@@ -36,28 +36,45 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:orientation="horizontal"
+        android:baselineAligned="false"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvDescription">
 
-        <EditText
-            android:id="@+id/etSeconds"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="@string/leaderboard_seconds_hint"
-            android:inputType="number"
-            android:maxLines="1" />
+            android:hint="@string/leaderboard_seconds_hint">
 
-        <EditText
-            android:id="@+id/etMilliseconds"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSeconds"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLines="1"
+                android:textColor="@color/route_log_text_primary"
+                android:textColorHint="@color/route_log_text_secondary" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:hint="@string/leaderboard_milliseconds_hint"
-            android:inputType="number"
-            android:maxLines="1" />
+            android:hint="@string/leaderboard_milliseconds_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etMilliseconds"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLines="1"
+                android:textColor="@color/route_log_text_primary"
+                android:textColorHint="@color/route_log_text_secondary" />
+        </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>
 
@@ -76,23 +93,35 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:orientation="horizontal"
+        android:baselineAligned="false"
         app:layout_constraintTop_toBottomOf="@id/btnSubmitTime"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGlobal"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/leaderboard_tab_global" />
+            android:text="@string/leaderboard_tab_global"
+            android:textColor="@color/tab_button_text"
+            app:backgroundTint="@color/tab_button_background"
+            app:strokeColor="@color/tab_button_stroke"
+            app:strokeWidth="1dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPersonal"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/leaderboard_tab_personal" />
+            android:layout_marginStart="8dp"
+            android:text="@string/leaderboard_tab_personal"
+            android:textColor="@color/tab_button_text"
+            app:backgroundTint="@color/tab_button_background"
+            app:strokeColor="@color/tab_button_stroke"
+            app:strokeWidth="1dp" />
     </LinearLayout>
 
     <TextView
