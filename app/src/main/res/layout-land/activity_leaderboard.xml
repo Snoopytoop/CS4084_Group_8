@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/route_log_screen_bg"
     android:padding="16dp">
 
     <include
@@ -34,6 +35,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/leaderboard_title"
+                android:textColor="@color/route_log_text_primary"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
@@ -43,6 +45,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/leaderboard_description"
+                android:textColor="@color/route_log_text_secondary"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -50,26 +53,43 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:baselineAligned="false">
 
-                <EditText
-                    android:id="@+id/etSeconds"
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="@string/leaderboard_seconds_hint"
-                    android:inputType="number"
-                    android:maxLines="1" />
+                    android:hint="@string/leaderboard_seconds_hint">
 
-                <EditText
-                    android:id="@+id/etMilliseconds"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etSeconds"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLines="1"
+                        android:textColor="@color/route_log_text_primary"
+                        android:textColorHint="@color/route_log_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:hint="@string/leaderboard_milliseconds_hint"
-                    android:inputType="number"
-                    android:maxLines="1" />
+                    android:hint="@string/leaderboard_milliseconds_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etMilliseconds"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLines="1"
+                        android:textColor="@color/route_log_text_primary"
+                        android:textColorHint="@color/route_log_text_secondary" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
             <Button
@@ -84,21 +104,33 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:baselineAligned="false">
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnGlobal"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/leaderboard_tab_global" />
+                    android:text="@string/leaderboard_tab_global"
+                    android:textColor="@color/tab_button_text"
+                    app:backgroundTint="@color/tab_button_background"
+                    app:strokeColor="@color/tab_button_stroke"
+                    app:strokeWidth="1dp" />
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPersonal"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/leaderboard_tab_personal" />
+                    android:layout_marginStart="8dp"
+                    android:text="@string/leaderboard_tab_personal"
+                    android:textColor="@color/tab_button_text"
+                    app:backgroundTint="@color/tab_button_background"
+                    app:strokeColor="@color/tab_button_stroke"
+                    app:strokeWidth="1dp" />
             </LinearLayout>
 
             <TextView
@@ -107,6 +139,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/leaderboard_section_best_time_per_user"
+                android:textColor="@color/route_log_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -136,6 +169,7 @@
                     android:gravity="center"
                     android:minHeight="140dp"
                     android:text="@string/leaderboard_empty"
+                    android:textColor="@color/route_log_text_secondary"
                     android:textSize="14sp"
                     android:visibility="gone" />
             </FrameLayout>

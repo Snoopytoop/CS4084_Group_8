@@ -4,7 +4,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/route_log_screen_bg"
     android:padding="16dp">
 
     <include
@@ -35,28 +34,24 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Search Users"
-                android:textColor="@color/route_log_text_primary"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilSearch"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:hint="Username"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/ic_search"
-                app:startIconTint="@color/route_log_text_secondary">
+                app:startIconDrawable="@android:drawable/ic_menu_search">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etSearch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:textColor="@color/route_log_text_primary"
-                    android:textColorHint="@color/route_log_text_secondary" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
@@ -66,7 +61,6 @@
                 android:layout_marginTop="16dp"
                 android:gravity="center_horizontal"
                 android:text="No users found"
-                android:textColor="@color/route_log_text_secondary"
                 android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView

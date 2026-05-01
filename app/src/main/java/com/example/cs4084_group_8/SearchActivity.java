@@ -1,5 +1,6 @@
 package com.example.cs4084_group_8;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -57,13 +59,15 @@ public class SearchActivity extends AppCompatActivity {
         setupNavigation();
 
         View bottomNav = findViewById(R.id.bottomNavCard);
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
-            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            params.bottomMargin = 16 + bottomInset;
-            v.setLayoutParams(params);
-            return insets;
-        });
+        if (bottomNav != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+                int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                params.bottomMargin = 16 + bottomInset;
+                v.setLayoutParams(params);
+                return insets;
+            });
+        }
 
         adapter = new UserSearchAdapter(userList, user -> {
             Intent intent = new Intent(SearchActivity.this, UserProfileActivity.class);
@@ -90,37 +94,40 @@ public class SearchActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
-        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
         ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
-        btnNavHome.setOnClickListener(v -> {
-            startActivity(new Intent(this, HomeActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
+        if (btnNavHome != null) {
+            btnNavHome.setOnClickListener(v -> {
+                startActivity(new Intent(this, HomeActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavSearch.setOnClickListener(v -> {
-            // Already here
-        });
+        if (btnNavMessages != null) {
+            btnNavMessages.setOnClickListener(v -> {
+                startActivity(new Intent(this, InboxActivity.class));
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavMessages.setOnClickListener(v -> {
-            startActivity(new Intent(this, InboxActivity.class));
-            overridePendingTransition(0, 0);
-        });
+        if (btnNavCreatePost != null) {
+            btnNavCreatePost.setOnClickListener(v -> {
+                startActivity(new Intent(this, CreatePostActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavCreatePost.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreatePostActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
-
-        ivNavProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
+        if (ivNavProfile != null) {
+            ivNavProfile.setOnClickListener(v -> {
+                startActivity(new Intent(this, UserProfileActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -168,6 +175,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void loadNavProfileImage(String uid) {
+        if (ivNavProfile == null) return;
         firestore.collection("users").document(uid).get().addOnSuccessListener(snapshot -> {
             String url = snapshot.getString("profileImageUrl");
             if (!TextUtils.isEmpty(url)) {
@@ -182,7 +190,7 @@ public class SearchActivity extends AppCompatActivity {
         void onUserClick(User user);
     }
 
-    private class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.ViewHolder> {
+    private static class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.ViewHolder> {
         private final List<User> users;
         private final OnUserClickListener listener;
 
@@ -194,10 +202,10 @@ public class SearchActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
+            Context context = parent.getContext();
+            View view = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_1, parent, false);
             ViewHolder vh = new ViewHolder(view);
-            vh.text1.setTextColor(getResources().getColor(R.color.route_log_text_primary, getTheme()));
-            vh.text2.setTextColor(getResources().getColor(R.color.route_log_text_secondary, getTheme()));
+            vh.text1.setTextColor(ContextCompat.getColor(context, R.color.route_log_text_primary));
             view.setPadding(48, 32, 48, 32);
             return vh;
         }
@@ -206,7 +214,6 @@ public class SearchActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             User user = users.get(position);
             holder.text1.setText(user.getUsername());
-            holder.text2.setText(user.getEmail());
             holder.itemView.setOnClickListener(v -> listener.onUserClick(user));
         }
 
@@ -215,12 +222,11 @@ public class SearchActivity extends AppCompatActivity {
             return users.size();
         }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
-            TextView text1, text2;
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            TextView text1;
             ViewHolder(View itemView) {
                 super(itemView);
                 text1 = itemView.findViewById(android.R.id.text1);
-                text2 = itemView.findViewById(android.R.id.text2);
             }
         }
     }
