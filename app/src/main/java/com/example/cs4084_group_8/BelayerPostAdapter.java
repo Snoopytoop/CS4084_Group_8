@@ -39,8 +39,6 @@ public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdap
     public interface ActionListener {
         void onMessage(BelayerPost post);
 
-        void onCopyContact(BelayerPost post);
-
         void onDeletePost(BelayerPost post);
 
         void onViewProfile(BelayerPost post);
@@ -86,9 +84,6 @@ public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdap
         holder.tvClimbCapability.setText(
                 holder.itemView.getContext().getString(R.string.find_belayer_climb_format, post.getClimbCapability())
         );
-        holder.tvContactHandle.setText(
-                holder.itemView.getContext().getString(R.string.find_belayer_contact_format, post.getContactHandle())
-        );
 
         if (TextUtils.isEmpty(post.getNotes())) {
             holder.tvNotes.setVisibility(View.GONE);
@@ -99,7 +94,6 @@ public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdap
 
         holder.tvDisplayName.setOnClickListener(view -> actionListener.onViewProfile(post));
         holder.btnMessageBelayer.setOnClickListener(view -> actionListener.onMessage(post));
-        holder.btnCopyContact.setOnClickListener(view -> actionListener.onCopyContact(post));
 
         boolean isOwner = !TextUtils.isEmpty(currentUserUid) && currentUserUid.equals(post.getAuthorUid());
         holder.btnMessageBelayer.setVisibility(isOwner ? View.GONE : View.VISIBLE);
@@ -122,10 +116,8 @@ public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdap
         private final TextView tvTimeChip;
         private final TextView tvBelayCapability;
         private final TextView tvClimbCapability;
-        private final TextView tvContactHandle;
         private final TextView tvNotes;
         private final MaterialButton btnMessageBelayer;
-        private final MaterialButton btnCopyContact;
         private final MaterialButton btnDeleteBelayerPost;
 
         BelayerPostViewHolder(@NonNull View itemView) {
@@ -137,10 +129,8 @@ public class BelayerPostAdapter extends ListAdapter<BelayerPost, BelayerPostAdap
             tvTimeChip = itemView.findViewById(R.id.tvBelayerTimeChip);
             tvBelayCapability = itemView.findViewById(R.id.tvBelayerBelayCapability);
             tvClimbCapability = itemView.findViewById(R.id.tvBelayerClimbCapability);
-            tvContactHandle = itemView.findViewById(R.id.tvBelayerContactHandle);
             tvNotes = itemView.findViewById(R.id.tvBelayerNotes);
             btnMessageBelayer = itemView.findViewById(R.id.btnMessageBelayer);
-            btnCopyContact = itemView.findViewById(R.id.btnCopyBelayerContact);
             btnDeleteBelayerPost = itemView.findViewById(R.id.btnDeleteBelayerPost);
         }
     }

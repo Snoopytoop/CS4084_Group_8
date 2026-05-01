@@ -1,8 +1,5 @@
 package com.example.cs4084_group_8;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -42,7 +39,6 @@ public class FindBelayerActivity extends AppCompatActivity {
     private TextInputLayout tilBelayerTimes;
     private TextInputLayout tilBelayerCapability;
     private TextInputLayout tilClimbingCapability;
-    private TextInputLayout tilContactHandle;
     private TextInputLayout tilBelayerNotes;
 
     private TextInputEditText etBelayerName;
@@ -51,7 +47,6 @@ public class FindBelayerActivity extends AppCompatActivity {
     private TextInputEditText etBelayerTimes;
     private AutoCompleteTextView actvBelayerCapability;
     private TextInputEditText etClimbingCapability;
-    private TextInputEditText etContactHandle;
     private TextInputEditText etBelayerNotes;
     private MaterialButton btnPublishBelayerPost;
 
@@ -116,7 +111,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         tilBelayerTimes = findViewById(R.id.tilBelayerTimes);
         tilBelayerCapability = findViewById(R.id.tilBelayerCapability);
         tilClimbingCapability = findViewById(R.id.tilClimbingCapability);
-        tilContactHandle = findViewById(R.id.tilContactHandle);
         tilBelayerNotes = findViewById(R.id.tilBelayerNotes);
 
         etBelayerName = findViewById(R.id.etBelayerName);
@@ -125,7 +119,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         etBelayerTimes = findViewById(R.id.etBelayerTimes);
         actvBelayerCapability = findViewById(R.id.actvBelayerCapability);
         etClimbingCapability = findViewById(R.id.etClimbingCapability);
-        etContactHandle = findViewById(R.id.etContactHandle);
         etBelayerNotes = findViewById(R.id.etBelayerNotes);
         btnPublishBelayerPost = findViewById(R.id.btnPublishBelayerPost);
 
@@ -159,11 +152,6 @@ public class FindBelayerActivity extends AppCompatActivity {
                     @Override
                     public void onMessage(BelayerPost post) {
                         openConversation(post);
-                    }
-
-                    @Override
-                    public void onCopyContact(BelayerPost post) {
-                        copyContact(post);
                     }
 
                     @Override
@@ -211,7 +199,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         String climbTimes = valueOf(etBelayerTimes);
         String belayCapability = valueOf(actvBelayerCapability);
         String climbCapability = valueOf(etClimbingCapability);
-        String contactHandle = valueOf(etContactHandle);
         String notes = valueOf(etBelayerNotes);
 
         boolean hasError = false;
@@ -235,10 +222,6 @@ public class FindBelayerActivity extends AppCompatActivity {
             tilClimbingCapability.setError(getString(R.string.find_belayer_climb_required));
             hasError = true;
         }
-        if (TextUtils.isEmpty(contactHandle)) {
-            tilContactHandle.setError(getString(R.string.find_belayer_contact_required));
-            hasError = true;
-        }
         if (hasError) {
             return;
         }
@@ -256,7 +239,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         postData.put("climbTimes", climbTimes);
         postData.put("belayCapability", belayCapability);
         postData.put("climbCapability", climbCapability);
-        postData.put("contactHandle", contactHandle);
         postData.put("notes", notes);
         postData.put("createdAt", FieldValue.serverTimestamp());
 
@@ -334,23 +316,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         tvBelayerWallsValue.setText(getString(R.string.find_belayer_total_walls_value, uniqueWalls.size()));
     }
 
-    private void copyContact(BelayerPost post) {
-        String contactHandle = post.getContactHandle();
-        if (TextUtils.isEmpty(contactHandle)) {
-            Toast.makeText(this, R.string.find_belayer_contact_missing, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboardManager == null) {
-            Toast.makeText(this, R.string.find_belayer_contact_copy_failed, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        clipboardManager.setPrimaryClip(ClipData.newPlainText("belayer_contact", contactHandle));
-        Toast.makeText(this, R.string.find_belayer_contact_copied, Toast.LENGTH_SHORT).show();
-    }
-
     private void openConversation(BelayerPost post) {
         if (TextUtils.isEmpty(post.getAuthorUid())) {
             Toast.makeText(this, R.string.find_belayer_message_unavailable, Toast.LENGTH_SHORT).show();
@@ -414,7 +379,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         tilBelayerTimes.setError(null);
         tilBelayerCapability.setError(null);
         tilClimbingCapability.setError(null);
-        tilContactHandle.setError(null);
         tilBelayerNotes.setError(null);
     }
 
@@ -423,7 +387,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         etBelayerDays.setText("");
         etBelayerTimes.setText("");
         etClimbingCapability.setText("");
-        etContactHandle.setText("");
         etBelayerNotes.setText("");
 
         String[] capabilities = getResources().getStringArray(R.array.belay_capability_options);
