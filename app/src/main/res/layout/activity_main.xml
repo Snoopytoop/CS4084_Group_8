@@ -102,14 +102,6 @@
                 android:layout_marginTop="10dp"
                 android:text="@string/admin_login_entry_button" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnOfflineMode"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/main_offline_button" />
-
             <TextView
                 android:id="@+id/tvOfflineModeDescription"
                 android:layout_width="match_parent"
