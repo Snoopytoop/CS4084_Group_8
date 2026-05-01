@@ -171,16 +171,18 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSelectDays"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_height="48dp"
                         android:layout_marginEnd="6dp"
                         android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:text="@string/find_belayer_days_hint"
                         android:textColor="@color/route_log_text_primary"
                         app:cornerRadius="0dp" />
@@ -189,10 +191,11 @@
                         android:id="@+id/btnSelectTimes"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_height="48dp"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:text="@string/find_belayer_times_hint"
                         android:textColor="@color/route_log_text_primary"
                         app:cornerRadius="0dp" />
