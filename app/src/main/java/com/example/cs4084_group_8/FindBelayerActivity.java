@@ -1,8 +1,5 @@
 package com.example.cs4084_group_8;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -38,22 +35,27 @@ import java.util.Set;
 public class FindBelayerActivity extends AppCompatActivity {
     private TextInputLayout tilBelayerName;
     private TextInputLayout tilBelayerWall;
-    private TextInputLayout tilBelayerDays;
-    private TextInputLayout tilBelayerTimes;
     private TextInputLayout tilBelayerCapability;
     private TextInputLayout tilClimbingCapability;
-    private TextInputLayout tilContactHandle;
     private TextInputLayout tilBelayerNotes;
 
     private TextInputEditText etBelayerName;
     private TextInputEditText etBelayerWall;
-    private TextInputEditText etBelayerDays;
-    private TextInputEditText etBelayerTimes;
     private AutoCompleteTextView actvBelayerCapability;
     private TextInputEditText etClimbingCapability;
-    private TextInputEditText etContactHandle;
     private TextInputEditText etBelayerNotes;
+    
+    private MaterialButton btnSelectDays;
+    private MaterialButton btnSelectTimes;
+    private TextView tvSelectedDays;
+    private TextView tvSelectedTimes;
     private MaterialButton btnPublishBelayerPost;
+    
+    private MaterialButton btnFilterDays;
+    private MaterialButton btnFilterTimes;
+    private MaterialButton btnApplyFilters;
+    private MaterialButton btnClearFilters;
+    private TextView tvFilterStatus;
 
     private TextView tvBelayerPostsValue;
     private TextView tvBelayerWallsValue;
@@ -64,6 +66,15 @@ public class FindBelayerActivity extends AppCompatActivity {
     private FirebaseUser currentUser;
     private BelayerPostAdapter belayerPostAdapter;
     private ListenerRegistration belayerPostsListener;
+    
+    // Selected days and times for post creation
+    private Set<Integer> selectedDayIndices = new HashSet<>();
+    private Set<Integer> selectedTimeIndices = new HashSet<>();
+    
+    // Selected filters
+    private Set<Integer> filterDayIndices = new HashSet<>();
+    private Set<Integer> filterTimeIndices = new HashSet<>();
+    private List<BelayerPost> allPosts = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +93,8 @@ public class FindBelayerActivity extends AppCompatActivity {
         configureToolbar();
         configureBelayerCapabilityDropdown();
         configureBelayerPostsList();
+        configureDayAndTimeSelectors();
+        configureFilterButtons();
         prefillDisplayName();
 
         btnPublishBelayerPost.setOnClickListener(view -> publishBelayerPost());
@@ -112,22 +125,27 @@ public class FindBelayerActivity extends AppCompatActivity {
     private void bindViews() {
         tilBelayerName = findViewById(R.id.tilBelayerName);
         tilBelayerWall = findViewById(R.id.tilBelayerWall);
-        tilBelayerDays = findViewById(R.id.tilBelayerDays);
-        tilBelayerTimes = findViewById(R.id.tilBelayerTimes);
         tilBelayerCapability = findViewById(R.id.tilBelayerCapability);
         tilClimbingCapability = findViewById(R.id.tilClimbingCapability);
-        tilContactHandle = findViewById(R.id.tilContactHandle);
         tilBelayerNotes = findViewById(R.id.tilBelayerNotes);
 
         etBelayerName = findViewById(R.id.etBelayerName);
         etBelayerWall = findViewById(R.id.etBelayerWall);
-        etBelayerDays = findViewById(R.id.etBelayerDays);
-        etBelayerTimes = findViewById(R.id.etBelayerTimes);
         actvBelayerCapability = findViewById(R.id.actvBelayerCapability);
         etClimbingCapability = findViewById(R.id.etClimbingCapability);
-        etContactHandle = findViewById(R.id.etContactHandle);
         etBelayerNotes = findViewById(R.id.etBelayerNotes);
+        
+        btnSelectDays = findViewById(R.id.btnSelectDays);
+        btnSelectTimes = findViewById(R.id.btnSelectTimes);
+        tvSelectedDays = findViewById(R.id.tvSelectedDays);
+        tvSelectedTimes = findViewById(R.id.tvSelectedTimes);
         btnPublishBelayerPost = findViewById(R.id.btnPublishBelayerPost);
+        
+        btnFilterDays = findViewById(R.id.btnFilterDays);
+        btnFilterTimes = findViewById(R.id.btnFilterTimes);
+        btnApplyFilters = findViewById(R.id.btnApplyFilters);
+        btnClearFilters = findViewById(R.id.btnClearFilters);
+        tvFilterStatus = findViewById(R.id.tvFilterStatus);
 
         tvBelayerPostsValue = findViewById(R.id.tvBelayerPostsValue);
         tvBelayerWallsValue = findViewById(R.id.tvBelayerWallsValue);
@@ -159,11 +177,6 @@ public class FindBelayerActivity extends AppCompatActivity {
                     @Override
                     public void onMessage(BelayerPost post) {
                         openConversation(post);
-                    }
-
-                    @Override
-                    public void onCopyContact(BelayerPost post) {
-                        copyContact(post);
                     }
 
                     @Override
@@ -207,11 +220,10 @@ public class FindBelayerActivity extends AppCompatActivity {
 
         String displayName = valueOf(etBelayerName);
         String wallName = valueOf(etBelayerWall);
-        String climbDays = valueOf(etBelayerDays);
-        String climbTimes = valueOf(etBelayerTimes);
+        String climbDays = formatSelectedDays();
+        String climbTimes = formatSelectedTimes();
         String belayCapability = valueOf(actvBelayerCapability);
         String climbCapability = valueOf(etClimbingCapability);
-        String contactHandle = valueOf(etContactHandle);
         String notes = valueOf(etBelayerNotes);
 
         boolean hasError = false;
@@ -219,12 +231,12 @@ public class FindBelayerActivity extends AppCompatActivity {
             tilBelayerWall.setError(getString(R.string.find_belayer_wall_required));
             hasError = true;
         }
-        if (TextUtils.isEmpty(climbDays)) {
-            tilBelayerDays.setError(getString(R.string.find_belayer_days_required));
+        if (selectedDayIndices.isEmpty()) {
+            Toast.makeText(this, R.string.find_belayer_days_required, Toast.LENGTH_SHORT).show();
             hasError = true;
         }
-        if (TextUtils.isEmpty(climbTimes)) {
-            tilBelayerTimes.setError(getString(R.string.find_belayer_times_required));
+        if (selectedTimeIndices.isEmpty()) {
+            Toast.makeText(this, R.string.find_belayer_times_required, Toast.LENGTH_SHORT).show();
             hasError = true;
         }
         if (TextUtils.isEmpty(belayCapability)) {
@@ -233,10 +245,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         }
         if (TextUtils.isEmpty(climbCapability)) {
             tilClimbingCapability.setError(getString(R.string.find_belayer_climb_required));
-            hasError = true;
-        }
-        if (TextUtils.isEmpty(contactHandle)) {
-            tilContactHandle.setError(getString(R.string.find_belayer_contact_required));
             hasError = true;
         }
         if (hasError) {
@@ -256,7 +264,6 @@ public class FindBelayerActivity extends AppCompatActivity {
         postData.put("climbTimes", climbTimes);
         postData.put("belayCapability", belayCapability);
         postData.put("climbCapability", climbCapability);
-        postData.put("contactHandle", contactHandle);
         postData.put("notes", notes);
         postData.put("createdAt", FieldValue.serverTimestamp());
 
@@ -297,25 +304,29 @@ public class FindBelayerActivity extends AppCompatActivity {
                         return;
                     }
 
-                    List<BelayerPost> posts = new ArrayList<>();
+                    allPosts = new ArrayList<>();
                     if (value != null) {
                         value.getDocuments().forEach(documentSnapshot -> {
                             BelayerPost post = documentSnapshot.toObject(BelayerPost.class);
                             if (post != null) {
                                 post.setId(documentSnapshot.getId());
-                                posts.add(post);
+                                allPosts.add(post);
                             }
                         });
                     }
-                    posts.sort(Comparator.comparing(
+                    
+                    allPosts.sort(Comparator.comparing(
                             BelayerPost::getCreatedAt,
                             Comparator.nullsLast(Comparator.naturalOrder())
                     ).reversed());
+                    
+                    // Apply filters if any are selected
+                    List<BelayerPost> postsToDisplay = applyFilters(allPosts);
+                    
+                    belayerPostAdapter.submitList(postsToDisplay);
+                    updateSummary(postsToDisplay);
 
-                    belayerPostAdapter.submitPosts(posts);
-                    updateSummary(posts);
-
-                    boolean hasPosts = !posts.isEmpty();
+                    boolean hasPosts = !postsToDisplay.isEmpty();
                     rvBelayerPosts.setVisibility(hasPosts ? RecyclerView.VISIBLE : RecyclerView.GONE);
                     tvBelayerPostsEmpty.setVisibility(hasPosts ? TextView.GONE : TextView.VISIBLE);
                     if (!hasPosts) {
@@ -332,23 +343,6 @@ public class FindBelayerActivity extends AppCompatActivity {
 
         tvBelayerPostsValue.setText(getString(R.string.find_belayer_total_posts_value, posts.size()));
         tvBelayerWallsValue.setText(getString(R.string.find_belayer_total_walls_value, uniqueWalls.size()));
-    }
-
-    private void copyContact(BelayerPost post) {
-        String contactHandle = post.getContactHandle();
-        if (TextUtils.isEmpty(contactHandle)) {
-            Toast.makeText(this, R.string.find_belayer_contact_missing, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboardManager == null) {
-            Toast.makeText(this, R.string.find_belayer_contact_copy_failed, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        clipboardManager.setPrimaryClip(ClipData.newPlainText("belayer_contact", contactHandle));
-        Toast.makeText(this, R.string.find_belayer_contact_copied, Toast.LENGTH_SHORT).show();
     }
 
     private void openConversation(BelayerPost post) {
@@ -410,21 +404,21 @@ public class FindBelayerActivity extends AppCompatActivity {
     private void clearInputErrors() {
         tilBelayerName.setError(null);
         tilBelayerWall.setError(null);
-        tilBelayerDays.setError(null);
-        tilBelayerTimes.setError(null);
         tilBelayerCapability.setError(null);
         tilClimbingCapability.setError(null);
-        tilContactHandle.setError(null);
         tilBelayerNotes.setError(null);
     }
 
     private void clearPostForm() {
         etBelayerWall.setText("");
-        etBelayerDays.setText("");
-        etBelayerTimes.setText("");
         etClimbingCapability.setText("");
-        etContactHandle.setText("");
         etBelayerNotes.setText("");
+        
+        // Clear selected days and times
+        selectedDayIndices.clear();
+        selectedTimeIndices.clear();
+        updateSelectedDaysDisplay();
+        updateSelectedTimesDisplay();
 
         String[] capabilities = getResources().getStringArray(R.array.belay_capability_options);
         if (capabilities.length > 0) {
@@ -439,6 +433,302 @@ public class FindBelayerActivity extends AppCompatActivity {
             return "";
         }
         return view.getText().toString().trim();
+    }
+    
+    private void configureDayAndTimeSelectors() {
+        btnSelectDays.setOnClickListener(v -> showDaySelectionDialog());
+        btnSelectTimes.setOnClickListener(v -> showTimeSelectionDialog());
+    }
+    
+    private void configureFilterButtons() {
+        btnFilterDays.setOnClickListener(v -> showFilterDaySelectionDialog());
+        btnFilterTimes.setOnClickListener(v -> showFilterTimeSelectionDialog());
+        btnApplyFilters.setOnClickListener(v -> applyFiltersAndRefresh());
+        btnClearFilters.setOnClickListener(v -> {
+            filterDayIndices.clear();
+            filterTimeIndices.clear();
+            updateFilterStatus();
+            applyFiltersAndRefresh();
+        });
+    }
+    
+    private void showDaySelectionDialog() {
+        String[] daysArray = getResources().getStringArray(R.array.days_of_week);
+        boolean[] checkedItems = new boolean[daysArray.length];
+        for (int i = 0; i < daysArray.length; i++) {
+            checkedItems[i] = selectedDayIndices.contains(i);
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.find_belayer_select_days_title)
+                .setMultiChoiceItems(daysArray, checkedItems, (dialog, which, isChecked) -> {
+                    if (isChecked) {
+                        selectedDayIndices.add(which);
+                    } else {
+                        selectedDayIndices.remove(which);
+                    }
+                })
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    updateSelectedDaysDisplay();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+    
+    private void showTimeSelectionDialog() {
+        String[] timesArray = getResources().getStringArray(R.array.time_periods);
+        boolean[] checkedItems = new boolean[timesArray.length];
+        for (int i = 0; i < timesArray.length; i++) {
+            checkedItems[i] = selectedTimeIndices.contains(i);
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.find_belayer_select_times_title)
+                .setMultiChoiceItems(timesArray, checkedItems, (dialog, which, isChecked) -> {
+                    if (isChecked) {
+                        selectedTimeIndices.add(which);
+                    } else {
+                        selectedTimeIndices.remove(which);
+                    }
+                })
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    updateSelectedTimesDisplay();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+    
+    private void showFilterDaySelectionDialog() {
+        String[] daysArray = getResources().getStringArray(R.array.days_of_week);
+        boolean[] checkedItems = new boolean[daysArray.length];
+        for (int i = 0; i < daysArray.length; i++) {
+            checkedItems[i] = filterDayIndices.contains(i);
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.find_belayer_select_days_title)
+                .setMultiChoiceItems(daysArray, checkedItems, (dialog, which, isChecked) -> {
+                    if (isChecked) {
+                        filterDayIndices.add(which);
+                    } else {
+                        filterDayIndices.remove(which);
+                    }
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+    
+    private void showFilterTimeSelectionDialog() {
+        String[] timesArray = getResources().getStringArray(R.array.time_periods);
+        boolean[] checkedItems = new boolean[timesArray.length];
+        for (int i = 0; i < timesArray.length; i++) {
+            checkedItems[i] = filterTimeIndices.contains(i);
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.find_belayer_select_times_title)
+                .setMultiChoiceItems(timesArray, checkedItems, (dialog, which, isChecked) -> {
+                    if (isChecked) {
+                        filterTimeIndices.add(which);
+                    } else {
+                        filterTimeIndices.remove(which);
+                    }
+                })
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+    
+    private String formatSelectedDays() {
+        if (selectedDayIndices.isEmpty()) {
+            return "";
+        }
+        
+        String[] daysArray = getResources().getStringArray(R.array.days_of_week);
+        List<String> selectedDays = new ArrayList<>();
+        
+        for (Integer index : selectedDayIndices) {
+            if (index < daysArray.length) {
+                selectedDays.add(daysArray[index].substring(0, 3)); // Get first 3 letters (Mon, Tue, etc.)
+            }
+        }
+        
+        return TextUtils.join(", ", selectedDays);
+    }
+    
+    private String formatSelectedTimes() {
+        if (selectedTimeIndices.isEmpty()) {
+            return "";
+        }
+        
+        String[] timesArray = getResources().getStringArray(R.array.time_periods);
+        List<String> selectedTimes = new ArrayList<>();
+        
+        for (Integer index : selectedTimeIndices) {
+            if (index < timesArray.length) {
+                selectedTimes.add(timesArray[index]);
+            }
+        }
+        
+        return TextUtils.join("; ", selectedTimes);
+    }
+    
+    private void updateSelectedDaysDisplay() {
+        String formattedDays = formatSelectedDays();
+        if (TextUtils.isEmpty(formattedDays)) {
+            tvSelectedDays.setVisibility(TextView.GONE);
+            btnSelectDays.setText(R.string.find_belayer_days_hint);
+        } else {
+            tvSelectedDays.setText(getString(R.string.find_belayer_selected_days, formattedDays));
+            tvSelectedDays.setVisibility(TextView.VISIBLE);
+            btnSelectDays.setText(R.string.find_belayer_days_hint);
+        }
+    }
+    
+    private void updateSelectedTimesDisplay() {
+        String formattedTimes = formatSelectedTimes();
+        if (TextUtils.isEmpty(formattedTimes)) {
+            tvSelectedTimes.setVisibility(TextView.GONE);
+            btnSelectTimes.setText(R.string.find_belayer_times_hint);
+        } else {
+            tvSelectedTimes.setText(getString(R.string.find_belayer_selected_times, formattedTimes));
+            tvSelectedTimes.setVisibility(TextView.VISIBLE);
+            btnSelectTimes.setText(R.string.find_belayer_times_hint);
+        }
+    }
+    
+    private List<BelayerPost> applyFilters(List<BelayerPost> postsToFilter) {
+        // If no filters are applied, return all posts
+        if (filterDayIndices.isEmpty() && filterTimeIndices.isEmpty()) {
+            return postsToFilter;
+        }
+        
+        List<BelayerPost> filteredPosts = new ArrayList<>();
+        String[] daysArray = getResources().getStringArray(R.array.days_of_week);
+        
+        for (BelayerPost post : postsToFilter) {
+            boolean matchesDay = filterDayIndices.isEmpty();
+            boolean matchesTime = filterTimeIndices.isEmpty();
+            
+            // Check days
+            if (!filterDayIndices.isEmpty() && !TextUtils.isEmpty(post.getClimbDays())) {
+                String postDays = post.getClimbDays().toLowerCase();
+                for (Integer dayIndex : filterDayIndices) {
+                    if (dayIndex < daysArray.length) {
+                        String dayAbbr = daysArray[dayIndex].substring(0, 3).toLowerCase();
+                        if (postDays.contains(dayAbbr)) {
+                            matchesDay = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Check times
+            if (!filterTimeIndices.isEmpty() && !TextUtils.isEmpty(post.getClimbTimes())) {
+                String postTimes = post.getClimbTimes().toLowerCase();
+                for (Integer timeIndex : filterTimeIndices) {
+                    // Simple check - if post times contain any of the filter time periods' hours
+                    String[] timePeriods = getResources().getStringArray(R.array.time_periods);
+                    if (timeIndex < timePeriods.length) {
+                        String timePeriod = timePeriods[timeIndex];
+                        // Extract hours from time period (e.g., "6:00" from "Early morning (6:00 - 9:00)")
+                        if (postTimes.contains("18") || postTimes.contains("19") || postTimes.contains("20") || postTimes.contains("21")) {
+                            if (timePeriod.contains("18") || timePeriod.contains("19") || timePeriod.contains("20") || timePeriod.contains("21")) {
+                                matchesTime = true;
+                                break;
+                            }
+                        } else if (postTimes.contains("6") || postTimes.contains("7") || postTimes.contains("8") || postTimes.contains("9")) {
+                            if (timePeriod.contains("6") || timePeriod.contains("7") || timePeriod.contains("8") || timePeriod.contains("9")) {
+                                matchesTime = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (matchesDay && matchesTime) {
+                filteredPosts.add(post);
+            }
+        }
+        
+        return filteredPosts;
+    }
+    
+    private void applyFiltersAndRefresh() {
+        List<BelayerPost> filteredPosts = applyFilters(allPosts);
+        belayerPostAdapter.submitList(filteredPosts);
+        updateSummary(filteredPosts);
+        
+        boolean hasPosts = !filteredPosts.isEmpty();
+        rvBelayerPosts.setVisibility(hasPosts ? RecyclerView.VISIBLE : RecyclerView.GONE);
+        tvBelayerPostsEmpty.setVisibility(hasPosts ? TextView.GONE : TextView.VISIBLE);
+        if (!hasPosts) {
+            tvBelayerPostsEmpty.setText(R.string.find_belayer_empty_history);
+        }
+        
+        updateFilterStatus();
+    }
+    
+    private void updateFilterStatus() {
+        if (filterDayIndices.isEmpty() && filterTimeIndices.isEmpty()) {
+            tvFilterStatus.setText(R.string.find_belayer_no_filter);
+        } else {
+            String daysText = formatFilteredDays();
+            String timesText = formatFilteredTimes();
+            
+            if (!TextUtils.isEmpty(daysText) && !TextUtils.isEmpty(timesText)) {
+                tvFilterStatus.setText(getString(R.string.find_belayer_selected_days, daysText) + "\n" + getString(R.string.find_belayer_selected_times, timesText));
+            } else if (!TextUtils.isEmpty(daysText)) {
+                tvFilterStatus.setText(getString(R.string.find_belayer_selected_days, daysText));
+            } else if (!TextUtils.isEmpty(timesText)) {
+                tvFilterStatus.setText(getString(R.string.find_belayer_selected_times, timesText));
+            }
+        }
+    }
+    
+    private String formatFilteredDays() {
+        if (filterDayIndices.isEmpty()) {
+            return "";
+        }
+        
+        String[] daysArray = getResources().getStringArray(R.array.days_of_week);
+        List<String> selectedDays = new ArrayList<>();
+        
+        for (Integer index : filterDayIndices) {
+            if (index < daysArray.length) {
+                selectedDays.add(daysArray[index].substring(0, 3));
+            }
+        }
+        
+        return TextUtils.join(", ", selectedDays);
+    }
+    
+    private String formatFilteredTimes() {
+        if (filterTimeIndices.isEmpty()) {
+            return "";
+        }
+        
+        String[] timesArray = getResources().getStringArray(R.array.time_periods);
+        List<String> selectedTimes = new ArrayList<>();
+        
+        for (Integer index : filterTimeIndices) {
+            if (index < timesArray.length) {
+                // Extract the time range from the period (e.g., "6:00 - 9:00" from "Early morning (6:00 - 9:00)")
+                String period = timesArray[index];
+                int startParen = period.indexOf("(");
+                int endParen = period.indexOf(")");
+                if (startParen != -1 && endParen != -1) {
+                    selectedTimes.add(period.substring(startParen + 1, endParen));
+                } else {
+                    selectedTimes.add(period);
+                }
+            }
+        }
+        
+        return TextUtils.join("; ", selectedTimes);
     }
 
     private boolean isServerAccessBlocked() {

@@ -104,7 +104,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     private void configureToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbarAdminDashboard);
-        toolbar.setNavigationOnClickListener(view -> finish());
+        toolbar.setNavigationOnClickListener(view -> openRegularView());
+    }
+
+    private void openRegularView() {
+        Intent intent = new Intent(this, HomeActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        finish();
     }
 
     private void monitorAdminRole(FirebaseUser currentUser) {

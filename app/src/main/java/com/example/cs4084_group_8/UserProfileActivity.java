@@ -37,11 +37,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class UserProfileActivity extends AppCompatActivity {
     private static final int MENU_EDIT_PROFILE_ID = 1001;
     private static final int MENU_LOGOUT_ID = 1002;
+    private static final int MENU_BACK_TO_ADMIN_DASHBOARD_ID = 1003;
     private static final String PROFILE_CACHE_PREF = "profile_cache";
     private static final String PROFILE_IMAGE_URL_PREFIX = "profile_image_url_";
 
@@ -49,12 +51,14 @@ public class UserProfileActivity extends AppCompatActivity {
     private TextView tvUsername;
     private TextView tvEmail;
     private TextView tvBio;
+    private TextView tvStatPosts;
+    private TextView tvStatRoutes;
+    private TextView tvStatSpeedwall;
     private ImageButton btnSettings;
-    private ImageButton btnCreatePostTop;
     private ImageButton btnNavHome;
     private ImageButton btnNavSearch;
     private ImageButton btnNavCreatePost;
-    private ImageButton btnNavLeaderboard;
+    private ImageButton btnNavMessages;
     private ShapeableImageView ivNavProfile;
     private RecyclerView rvMyPosts;
     private TextView tvEmptyMyPosts;
@@ -64,8 +68,10 @@ public class UserProfileActivity extends AppCompatActivity {
     private FirebaseUser currentUser;
     private PostAdapter postAdapter;
     private ListenerRegistration myPostsListener;
+    private ListenerRegistration leaderboardListener;
     private String viewedUserId = "";
     private String viewedUsername = "";
+    private boolean isCurrentUserAdmin = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,12 +82,14 @@ public class UserProfileActivity extends AppCompatActivity {
         tvUsername = findViewById(R.id.tvUsername);
         tvEmail = findViewById(R.id.tvEmail);
         tvBio = findViewById(R.id.tvBio);
+        tvStatPosts = findViewById(R.id.tvStatPosts);
+        tvStatRoutes = findViewById(R.id.tvStatRoutes);
+        tvStatSpeedwall = findViewById(R.id.tvStatSpeedwall);
         btnSettings = findViewById(R.id.btnSettings);
-        btnCreatePostTop = findViewById(R.id.btnCreatePostTop);
         btnNavHome = findViewById(R.id.btnNavHome);
         btnNavSearch = findViewById(R.id.btnNavSearch);
         btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
-        btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        btnNavMessages = findViewById(R.id.btnNavMessages);
         ivNavProfile = findViewById(R.id.ivNavProfile);
         rvMyPosts = findViewById(R.id.rvMyPosts);
         tvEmptyMyPosts = findViewById(R.id.tvEmptyMyPosts);
@@ -107,8 +115,7 @@ public class UserProfileActivity extends AppCompatActivity {
         rvMyPosts.setAdapter(postAdapter);
 
         btnSettings.setOnClickListener(v -> showSettingsMenu());
-        btnCreatePostTop.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
-        
+
         btnNavHome.setOnClickListener(v -> {
             startActivity(new Intent(this, HomeActivity.class));
             finish();
@@ -122,13 +129,18 @@ public class UserProfileActivity extends AppCompatActivity {
             startActivity(new Intent(this, CreatePostActivity.class));
             overridePendingTransition(0, 0);
         });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
             overridePendingTransition(0, 0);
         });
         ivNavProfile.setOnClickListener(v -> {
-            // Already on profile, but if viewing another user, we might want to navigate to own? 
-            // For now keep as is.
+            // If already on profile, but viewing someone else, go to own profile
+            if (currentUser != null && !TextUtils.equals(viewedUserId, currentUser.getUid())) {
+                Intent intent = new Intent(this, UserProfileActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
         });
         btnMessageUser.setOnClickListener(v -> openDirectMessage());
 
@@ -146,6 +158,11 @@ public class UserProfileActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            resolveCurrentUserRole();
+            loadNavProfileImage(currentUser.getUid(), ivNavProfile);
+        }
         loadUserProfile();
     }
 
@@ -155,6 +172,10 @@ public class UserProfileActivity extends AppCompatActivity {
         if (myPostsListener != null) {
             myPostsListener.remove();
             myPostsListener = null;
+        }
+        if (leaderboardListener != null) {
+            leaderboardListener.remove();
+            leaderboardListener = null;
         }
     }
 
@@ -179,14 +200,13 @@ public class UserProfileActivity extends AppCompatActivity {
             // Viewing your own profile
             tvEmail.setText(loggedInUser.getEmail() == null ? "" : loggedInUser.getEmail());
             tvEmail.setVisibility(View.VISIBLE);
-            btnSettings.setVisibility(View.VISIBLE); // show settings
             btnMessageUser.setVisibility(View.GONE);
         } else {
             // Viewing someone else's profile
             tvEmail.setVisibility(View.GONE);
-            btnSettings.setVisibility(View.GONE); // hide settings
             btnMessageUser.setVisibility(View.VISIBLE);
         }
+        updateSettingsButtonVisibility();
 
         // Load user data from Firestore
         firestore.collection("users")
@@ -202,17 +222,88 @@ public class UserProfileActivity extends AppCompatActivity {
                     tvBio.setText(TextUtils.isEmpty(bio) ? "No bio yet" : bio);
 
                     if (!TextUtils.isEmpty(imageUrl)) {
-                        loadProfileImages(imageUrl, targetUserId);
+                        renderViewedProfileImage(imageUrl, ivProfile);
                     } else {
-                        ivProfile.setImageResource(android.R.drawable.ic_menu_camera);
-                        ivNavProfile.setImageResource(android.R.drawable.ic_menu_camera);
+                        ivProfile.setImageResource(R.drawable.ic_person);
                     }
 
-                    // Load THAT user's posts
+                    // Load THAT user's posts and stats
                     listenForMyPosts(targetUserId);
+                    loadStats(targetUserId);
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                .addOnFailureListener(e -> {
+                    if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+                    Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void resolveCurrentUserRole() {
+        if (currentUser == null) {
+            isCurrentUserAdmin = false;
+            updateSettingsButtonVisibility();
+            return;
+        }
+        firestore.collection(FirestoreCollections.USERS)
+                .document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                    isCurrentUserAdmin = AuthRoles.ADMIN.equalsIgnoreCase(role);
+                    updateSettingsButtonVisibility();
+                })
+                .addOnFailureListener(e -> {
+                    isCurrentUserAdmin = false;
+                    updateSettingsButtonVisibility();
+                });
+    }
+
+    private void updateSettingsButtonVisibility() {
+        boolean isViewingOwnProfile = currentUser != null
+                && !TextUtils.isEmpty(viewedUserId)
+                && TextUtils.equals(viewedUserId, currentUser.getUid());
+        boolean shouldShowSettings = isViewingOwnProfile || isCurrentUserAdmin;
+        btnSettings.setVisibility(shouldShowSettings ? View.VISIBLE : View.GONE);
+    }
+
+    private void loadNavProfileImage(String uid, ImageView targetView) {
+        String cachedUrl = getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
+                .getString(PROFILE_IMAGE_URL_PREFIX + uid, null);
+        if (!TextUtils.isEmpty(cachedUrl)) {
+            renderNavProfileImage(cachedUrl, targetView);
+        }
+
+        firestore.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    String imageUrl = snapshot.getString("profileImageUrl");
+                    if (TextUtils.isEmpty(imageUrl)) {
+                        targetView.setImageResource(R.drawable.ic_person);
+                        return;
+                    }
+                    getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
+                            .edit()
+                            .putString(PROFILE_IMAGE_URL_PREFIX + uid, imageUrl)
+                            .apply();
+                    renderNavProfileImage(imageUrl, targetView);
+                })
+                .addOnFailureListener(e -> targetView.setImageResource(R.drawable.ic_person));
+    }
+
+    private void renderNavProfileImage(String imageUrl, ImageView targetView) {
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .into(targetView);
+    }
+
+    private void renderViewedProfileImage(String imageUrl, ImageView targetView) {
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .into(targetView);
     }
 
     private void openDirectMessage() {
@@ -230,6 +321,55 @@ public class UserProfileActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private void loadStats(String uid) {
+        firestore.collection("posts")
+                .whereEqualTo("authorUid", uid)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (tvStatPosts != null) tvStatPosts.setText(String.valueOf(snap.size()));
+                });
+
+        firestore.collection(FirestoreCollections.ROUTE_LOGS)
+                .whereEqualTo("authorUid", uid)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (tvStatRoutes != null) tvStatRoutes.setText(String.valueOf(snap.size()));
+                });
+
+        if (leaderboardListener != null) {
+            leaderboardListener.remove();
+        }
+        leaderboardListener = firestore.collection(FirestoreCollections.LEADERBOARD)
+                .whereEqualTo("uid", uid)
+                .addSnapshotListener((value, error) -> {
+                    if (tvStatSpeedwall == null) return;
+                    if (error != null || value == null || value.isEmpty()) {
+                        tvStatSpeedwall.setText("--");
+                        return;
+                    }
+
+                    long minTotalMs = Long.MAX_VALUE;
+                    LeaderboardEntry bestEntry = null;
+
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                        LeaderboardEntry entry = doc.toObject(LeaderboardEntry.class);
+                        if (entry != null) {
+                            if (entry.getTotalMs() > 0 && entry.getTotalMs() < minTotalMs) {
+                                minTotalMs = entry.getTotalMs();
+                                bestEntry = entry;
+                            }
+                        }
+                    }
+
+                    if (bestEntry != null) {
+                        tvStatSpeedwall.setText(String.format(Locale.getDefault(), "%d.%03ds",
+                                bestEntry.getSeconds(), bestEntry.getMilliseconds()));
+                    } else {
+                        tvStatSpeedwall.setText("--");
+                    }
+                });
+    }
+
     private void listenForMyPosts(String uid) {
         if (myPostsListener != null) {
             myPostsListener.remove();
@@ -238,6 +378,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 .whereEqualTo("authorUid", uid)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(this, "Failed to load posts: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -373,31 +514,21 @@ public class UserProfileActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void loadProfileImages(String imageUrl, String profileUserId) {
-        if (!TextUtils.isEmpty(profileUserId)) {
-            getSharedPreferences(PROFILE_CACHE_PREF, MODE_PRIVATE)
-                    .edit()
-                    .putString(PROFILE_IMAGE_URL_PREFIX + profileUserId, imageUrl)
-                    .apply();
-        }
-
-        Glide.with(this)
-                .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .error(android.R.drawable.ic_menu_camera)
-                .into(ivProfile);
-
-        Glide.with(this)
-                .load(imageUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .error(android.R.drawable.ic_menu_camera)
-                .into(ivNavProfile);
-    }
-
     private void showSettingsMenu() {
         PopupMenu popupMenu = new PopupMenu(this, btnSettings);
-        popupMenu.getMenu().add(0, MENU_EDIT_PROFILE_ID, 0, "Edit profile");
-        popupMenu.getMenu().add(0, MENU_LOGOUT_ID, 1, "Logout");
+        boolean isViewingOwnProfile = currentUser != null
+                && !TextUtils.isEmpty(viewedUserId)
+                && TextUtils.equals(viewedUserId, currentUser.getUid());
+
+        int order = 0;
+        if (isViewingOwnProfile) {
+            popupMenu.getMenu().add(0, MENU_EDIT_PROFILE_ID, order++, "Edit profile");
+        }
+        if (isCurrentUserAdmin) {
+            popupMenu.getMenu().add(0, MENU_BACK_TO_ADMIN_DASHBOARD_ID, order++, "Back to Admin Dashboard");
+        }
+        popupMenu.getMenu().add(0, MENU_LOGOUT_ID, order, "Logout");
+
         popupMenu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_EDIT_PROFILE_ID) {
                 Intent intent = new Intent(this, ProfileSetupActivity.class);
@@ -405,7 +536,21 @@ public class UserProfileActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             }
+            if (item.getItemId() == MENU_BACK_TO_ADMIN_DASHBOARD_ID) {
+                Intent intent = new Intent(this, AdminDashboardActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                return true;
+            }
             if (item.getItemId() == MENU_LOGOUT_ID) {
+                if (myPostsListener != null) {
+                    myPostsListener.remove();
+                    myPostsListener = null;
+                }
+                if (leaderboardListener != null) {
+                    leaderboardListener.remove();
+                    leaderboardListener = null;
+                }
                 OfflineSessionManager.disableOfflineMode(this);
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(this, MainActivity.class));

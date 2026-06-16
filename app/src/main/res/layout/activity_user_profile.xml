@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/route_log_screen_bg"
     android:padding="24dp">
 
     <TextView
@@ -10,6 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="My Profile"
+        android:textColor="@color/route_log_text_primary"
         android:textSize="26sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toStartOf="@id/btnSettings"
@@ -22,21 +24,9 @@
         android:layout_height="40dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Profile settings"
-        android:src="@android:drawable/ic_menu_manage"
+        android:src="@drawable/ic_edit"
         app:layout_constraintBottom_toBottomOf="@id/tvProfileTitle"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/tvProfileTitle" />
-
-    <ImageButton
-        android:id="@+id/btnCreatePostTop"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Create post"
-        android:src="@android:drawable/ic_menu_add"
-        app:layout_constraintBottom_toBottomOf="@id/tvProfileTitle"
-        app:layout_constraintEnd_toStartOf="@id/btnSettings"
         app:layout_constraintTop_toTopOf="@id/tvProfileTitle" />
 
     <ImageView
@@ -44,9 +34,9 @@
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:layout_marginTop="24dp"
-        android:background="@android:color/darker_gray"
+        android:background="@android:color/transparent"
         android:contentDescription="Profile image"
-        android:padding="20dp"
+        android:padding="0dp"
         android:scaleType="centerCrop"
         android:src="@android:drawable/ic_menu_camera"
         app:layout_constraintEnd_toEndOf="parent"
@@ -59,6 +49,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:text="Username"
+        android:textColor="@color/route_log_text_primary"
         android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -71,6 +62,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="email@example.com"
+        android:textColor="@color/route_log_text_secondary"
         android:textSize="15sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -82,6 +74,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="Bio"
+        android:textColor="@color/route_log_text_primary"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -94,12 +87,117 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="No bio yet"
+        android:textColor="@color/route_log_text_secondary"
         android:textSize="16sp"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBioLabel"
-        app:layout_constraintVertical_bias="0" />
+        app:layout_constraintTop_toBottomOf="@id/tvBioLabel" />
+
+    <TextView
+        android:id="@+id/tvStatsLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Stats"
+        android:textColor="@color/route_log_text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvBio" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/statsCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:cardBackgroundColor="@color/route_log_card_bg"
+        app:cardCornerRadius="16dp"
+        app:strokeColor="@color/route_log_badge_bg"
+        app:strokeWidth="1dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvStatsLabel">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvStatPosts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/route_log_accent"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Posts"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvStatRoutes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/route_log_accent"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Routes"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvStatSpeedwall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:textColor="@color/route_log_accent"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Speedwall Best"
+                    android:textColor="@color/route_log_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMessageUser"
@@ -110,7 +208,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBio" />
+        app:layout_constraintTop_toBottomOf="@id/statsCard" />
 
     <TextView
         android:id="@+id/tvMyPostsLabel"
@@ -118,6 +216,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="My Posts"
+        android:textColor="@color/route_log_text_primary"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -131,6 +230,7 @@
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
         android:text="No posts yet. Tap + to share one."
+        android:textColor="@color/route_log_text_secondary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvMyPostsLabel" />

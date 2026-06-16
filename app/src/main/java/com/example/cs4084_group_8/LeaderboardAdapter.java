@@ -6,27 +6,48 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
-public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.ViewHolder> {
+public class LeaderboardAdapter extends ListAdapter<LeaderboardEntry, LeaderboardAdapter.ViewHolder> {
+    private static final DiffUtil.ItemCallback<LeaderboardEntry> DIFF_CALLBACK = new DiffUtil.ItemCallback<LeaderboardEntry>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull LeaderboardEntry oldItem, @NonNull LeaderboardEntry newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull LeaderboardEntry oldItem, @NonNull LeaderboardEntry newItem) {
+            return Objects.equals(oldItem.getUsername(), newItem.getUsername())
+                    && oldItem.getSeconds() == newItem.getSeconds()
+                    && oldItem.getMilliseconds() == newItem.getMilliseconds()
+                    && Objects.equals(oldItem.getCreatedAt(), newItem.getCreatedAt());
+        }
+    };
 
     public interface OnEntryLongClickListener {
         void onEntryLongClick(LeaderboardEntry entry);
     }
 
-    private final List<LeaderboardEntry> entries = new ArrayList<>();
     private OnEntryLongClickListener longClickListener;
     private String currentUserId;
 
+    public LeaderboardAdapter() {
+        super(DIFF_CALLBACK);
+    }
+
     public void setEntries(List<LeaderboardEntry> newEntries) {
-        entries.clear();
         if (newEntries != null) {
-            entries.addAll(newEntries);
+            submitList(new ArrayList<>(newEntries));
+        } else {
+            submitList(new ArrayList<>());
         }
-        notifyDataSetChanged();
     }
 
     public void setOnEntryLongClickListener(OnEntryLongClickListener listener) {
@@ -47,17 +68,17 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        LeaderboardEntry entry = entries.get(position);
+        LeaderboardEntry entry = getItem(position);
         holder.tvRank.setText(String.valueOf(position + 1));
         holder.tvPlayerName.setText(entry.getUsername() != null && !entry.getUsername().isEmpty() ? entry.getUsername() : "Unknown");
 
         long seconds = entry.getSeconds();
         long milliseconds = entry.getMilliseconds();
-        holder.tvTime.setText(String.format("%d.%03ds", seconds, milliseconds));
+        holder.tvTime.setText(String.format(Locale.getDefault(), "%d.%03ds", seconds, milliseconds));
 
         String dateText = "-";
         if (entry.getCreatedAt() != null) {
-            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
             dateText = format.format(entry.getCreatedAt().toDate());
         }
         holder.tvDate.setText(dateText);
@@ -72,11 +93,6 @@ public class LeaderboardAdapter extends RecyclerView.Adapter<LeaderboardAdapter.
         } else {
             holder.itemView.setOnLongClickListener(null);
         }
-    }
-
-    @Override
-    public int getItemCount() {
-        return entries.size();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

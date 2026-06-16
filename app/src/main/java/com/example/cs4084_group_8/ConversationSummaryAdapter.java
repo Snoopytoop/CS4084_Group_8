@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.Timestamp;
@@ -15,33 +17,42 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class ConversationSummaryAdapter extends RecyclerView.Adapter<ConversationSummaryAdapter.ConversationViewHolder> {
+public class ConversationSummaryAdapter extends ListAdapter<ConversationSummary, ConversationSummaryAdapter.ConversationViewHolder> {
+    private static final DiffUtil.ItemCallback<ConversationSummary> DIFF_CALLBACK = new DiffUtil.ItemCallback<ConversationSummary>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull ConversationSummary oldItem, @NonNull ConversationSummary newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull ConversationSummary oldItem, @NonNull ConversationSummary newItem) {
+            return Objects.equals(oldItem.getLastMessageText(), newItem.getLastMessageText())
+                    && Objects.equals(oldItem.getLastMessageAt(), newItem.getLastMessageAt())
+                    && Objects.equals(oldItem.getMemberNames(), newItem.getMemberNames());
+        }
+    };
+
     public interface ActionListener {
         void onOpenConversation(ConversationSummary conversation, String otherUserId, String otherUserName);
     }
 
-    private final List<ConversationSummary> conversations = new ArrayList<>();
+    private static final SimpleDateFormat TIMESTAMP_FORMAT =
+            new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
     private final LayoutInflater layoutInflater;
     private final String currentUserUid;
     private final ActionListener actionListener;
-    private final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault());
 
     public ConversationSummaryAdapter(
             LayoutInflater layoutInflater,
             String currentUserUid,
             ActionListener actionListener
     ) {
+        super(DIFF_CALLBACK);
         this.layoutInflater = layoutInflater;
         this.currentUserUid = currentUserUid;
         this.actionListener = actionListener;
-    }
-
-    public void submitConversations(List<ConversationSummary> items) {
-        conversations.clear();
-        conversations.addAll(items);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -53,7 +64,7 @@ public class ConversationSummaryAdapter extends RecyclerView.Adapter<Conversatio
 
     @Override
     public void onBindViewHolder(@NonNull ConversationViewHolder holder, int position) {
-        ConversationSummary conversation = conversations.get(position);
+        ConversationSummary conversation = getItem(position);
         String otherUserId = getOtherUserId(conversation);
         String otherUserName = getOtherUserName(conversation, otherUserId);
 
@@ -66,11 +77,6 @@ public class ConversationSummaryAdapter extends RecyclerView.Adapter<Conversatio
         holder.itemView.setOnClickListener(view ->
                 actionListener.onOpenConversation(conversation, otherUserId, otherUserName)
         );
-    }
-
-    @Override
-    public int getItemCount() {
-        return conversations.size();
     }
 
     private String getOtherUserId(ConversationSummary conversation) {
@@ -100,7 +106,7 @@ public class ConversationSummaryAdapter extends RecyclerView.Adapter<Conversatio
         if (timestamp == null) {
             return "";
         }
-        return timestampFormat.format(timestamp.toDate());
+        return TIMESTAMP_FORMAT.format(timestamp.toDate());
     }
 
     private String firstNonEmpty(String... values) {

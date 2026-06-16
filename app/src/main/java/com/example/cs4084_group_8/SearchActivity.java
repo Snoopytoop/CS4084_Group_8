@@ -1,19 +1,22 @@
 package com.example.cs4084_group_8;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -25,20 +28,17 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SearchActivity extends AppCompatActivity {
-    private TextInputEditText etSearch;
-    private RecyclerView rvSearchResults;
     private TextView tvNoResults;
     private ShapeableImageView ivNavProfile;
 
     private FirebaseFirestore firestore;
     private UserSearchAdapter adapter;
-    private List<User> userList = new ArrayList<>();
+    private final List<User> userList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,20 +52,22 @@ public class SearchActivity extends AppCompatActivity {
 
         firestore = FirebaseFirestore.getInstance();
 
-        etSearch = findViewById(R.id.etSearch);
-        rvSearchResults = findViewById(R.id.rvSearchResults);
+        TextInputEditText etSearch = findViewById(R.id.etSearch);
+        RecyclerView rvSearchResults = findViewById(R.id.rvSearchResults);
         tvNoResults = findViewById(R.id.tvNoResults);
         
         setupNavigation();
 
         View bottomNav = findViewById(R.id.bottomNavCard);
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
-            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            params.bottomMargin = 16 + bottomInset;
-            v.setLayoutParams(params);
-            return insets;
-        });
+        if (bottomNav != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+                int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                params.bottomMargin = 16 + bottomInset;
+                v.setLayoutParams(params);
+                return insets;
+            });
+        }
 
         adapter = new UserSearchAdapter(userList, user -> {
             Intent intent = new Intent(SearchActivity.this, UserProfileActivity.class);
@@ -92,38 +94,40 @@ public class SearchActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
-        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
-        btnNavHome.setOnClickListener(v -> {
-            startActivity(new Intent(this, HomeActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
+        if (btnNavHome != null) {
+            btnNavHome.setOnClickListener(v -> {
+                startActivity(new Intent(this, HomeActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavSearch.setOnClickListener(v -> {
-            // Already here
-        });
+        if (btnNavMessages != null) {
+            btnNavMessages.setOnClickListener(v -> {
+                startActivity(new Intent(this, InboxActivity.class));
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
+        if (btnNavCreatePost != null) {
+            btnNavCreatePost.setOnClickListener(v -> {
+                startActivity(new Intent(this, CreatePostActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
-        btnNavCreatePost.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreatePostActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
-
-        ivNavProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
-            finish();
-            overridePendingTransition(0, 0);
-        });
+        if (ivNavProfile != null) {
+            ivNavProfile.setOnClickListener(v -> {
+                startActivity(new Intent(this, UserProfileActivity.class));
+                finish();
+                overridePendingTransition(0, 0);
+            });
+        }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -139,7 +143,6 @@ public class SearchActivity extends AppCompatActivity {
             return;
         }
 
-        // Firestore simple search: prefix search using \uf8ff
         firestore.collection("users")
                 .orderBy("username")
                 .startAt(queryText)
@@ -152,7 +155,7 @@ public class SearchActivity extends AppCompatActivity {
                         queryDocumentSnapshots.getDocuments().forEach(doc -> {
                             User user = doc.toObject(User.class);
                             if (user != null) {
-                                user.setUid(doc.getId()); // Ensure UID is set from document ID
+                                user.setUid(doc.getId());
                                 userList.add(user);
                             }
                         });
@@ -161,26 +164,35 @@ public class SearchActivity extends AppCompatActivity {
                         tvNoResults.setVisibility(View.VISIBLE);
                     }
                     adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    Log.w("SearchActivity", "searchUsers failed", e);
+                    userList.clear();
+                    adapter.notifyDataSetChanged();
+                    tvNoResults.setVisibility(View.VISIBLE);
+                    Toast.makeText(SearchActivity.this, R.string.search_failed_toast, Toast.LENGTH_SHORT).show();
                 });
     }
 
     private void loadNavProfileImage(String uid) {
+        if (ivNavProfile == null) return;
         firestore.collection("users").document(uid).get().addOnSuccessListener(snapshot -> {
             String url = snapshot.getString("profileImageUrl");
             if (!TextUtils.isEmpty(url)) {
-                Glide.with(this).load(url).placeholder(android.R.drawable.ic_menu_camera).into(ivNavProfile);
+                Glide.with(this).load(url).placeholder(R.drawable.ic_person).into(ivNavProfile);
+            } else {
+                ivNavProfile.setImageResource(R.drawable.ic_person);
             }
         });
     }
 
-    // Inner Adapter Class
+    private interface OnUserClickListener {
+        void onUserClick(User user);
+    }
+
     private static class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.ViewHolder> {
         private final List<User> users;
         private final OnUserClickListener listener;
-
-        interface OnUserClickListener {
-            void onUserClick(User user);
-        }
 
         UserSearchAdapter(List<User> users, OnUserClickListener listener) {
             this.users = users;
@@ -190,15 +202,18 @@ public class SearchActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
-            return new ViewHolder(view);
+            Context context = parent.getContext();
+            View view = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_1, parent, false);
+            ViewHolder vh = new ViewHolder(view);
+            vh.text1.setTextColor(ContextCompat.getColor(context, R.color.route_log_text_primary));
+            view.setPadding(48, 32, 48, 32);
+            return vh;
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             User user = users.get(position);
             holder.text1.setText(user.getUsername());
-            holder.text2.setText(user.getEmail());
             holder.itemView.setOnClickListener(v -> listener.onUserClick(user));
         }
 
@@ -208,16 +223,14 @@ public class SearchActivity extends AppCompatActivity {
         }
 
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView text1, text2;
+            TextView text1;
             ViewHolder(View itemView) {
                 super(itemView);
                 text1 = itemView.findViewById(android.R.id.text1);
-                text2 = itemView.findViewById(android.R.id.text2);
             }
         }
     }
 
-    // Temporary User class if not already defined (or matches Firestore)
     public static class User {
         private String uid;
         private String username;
@@ -229,7 +242,10 @@ public class SearchActivity extends AppCompatActivity {
         public String getUid() { return uid; }
         public void setUid(String uid) { this.uid = uid; }
         public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
         public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
         public String getProfileImageUrl() { return profileImageUrl; }
+        public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
     }
 }

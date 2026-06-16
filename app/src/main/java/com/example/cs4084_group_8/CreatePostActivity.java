@@ -29,6 +29,7 @@ import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,14 +58,14 @@ public class CreatePostActivity extends AppCompatActivity {
                     if (validationError != null) {
                         selectedImageUri = null;
                         ivSelectedPostImage.setVisibility(ImageView.GONE);
-                        btnPickPostImage.setText("Add Photo");
+                        btnPickPostImage.setText(R.string.create_post_add_photo);
                         Toast.makeText(this, validationError, Toast.LENGTH_LONG).show();
                         return;
                     }
                     selectedImageUri = uri;
                     ivSelectedPostImage.setImageURI(uri);
                     ivSelectedPostImage.setVisibility(ImageView.VISIBLE);
-                    btnPickPostImage.setText("Change Photo");
+                    btnPickPostImage.setText(R.string.create_post_change_photo);
                 }
             });
 
@@ -114,7 +115,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private void setupNavigation() {
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ivNavProfile = findViewById(R.id.ivNavProfile);
 
@@ -126,8 +127,8 @@ public class CreatePostActivity extends AppCompatActivity {
             startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            startActivity(new Intent(this, LeaderboardActivity.class));
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
             overridePendingTransition(0, 0);
         });
         btnNavCreatePost.setOnClickListener(v -> {
@@ -207,6 +208,11 @@ public class CreatePostActivity extends AppCompatActivity {
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    if (snapshot == null || !snapshot.exists()) {
+                        setLoading(false);
+                        Toast.makeText(this, "User profile not found", Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     String authorName = snapshot.getString("username");
                     String authorProfileImageUrl = snapshot.getString("profileImageUrl");
 
@@ -214,7 +220,7 @@ public class CreatePostActivity extends AppCompatActivity {
                     postData.put("authorUid", currentUser.getUid());
                     postData.put("authorName", TextUtils.isEmpty(authorName) ? "Unknown user" : authorName);
                     postData.put("authorProfileImageUrl", authorProfileImageUrl);
-                    postData.put("postType", postType.toLowerCase());
+                    postData.put("postType", postType.toLowerCase(Locale.ROOT));
                     postData.put("content", content);
                     postData.put("mediaUrl", mediaUrl);
                     postData.put("likesCount", 0);
@@ -264,7 +270,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private String inferPostType(String content) {
         String firstUrl = extractFirstUrl(content);
         if (!TextUtils.isEmpty(firstUrl)) {
-            String normalized = firstUrl.toLowerCase();
+            String normalized = firstUrl.toLowerCase(Locale.ROOT);
             if (normalized.contains("youtube.com")
                     || normalized.contains("youtu.be")
                     || normalized.contains("vimeo.com")

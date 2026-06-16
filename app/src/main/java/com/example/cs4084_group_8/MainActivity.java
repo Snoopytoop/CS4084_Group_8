@@ -35,7 +35,6 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText etPassword;
     private MaterialButton btnRegister;
     private MaterialButton btnAdminLogin;
-    private MaterialButton btnOfflineMode;
     private TextView tvTitle;
     private TextView tvSwitchMode;
 
@@ -55,7 +54,6 @@ public class MainActivity extends AppCompatActivity {
 
         btnRegister.setOnClickListener(v -> handleAuthAction());
         btnAdminLogin.setOnClickListener(v -> startActivity(new Intent(this, AdminLoginActivity.class)));
-        btnOfflineMode.setOnClickListener(v -> startOfflineMode());
         tvSwitchMode.setOnClickListener(v -> {
             isRegisterMode = !isRegisterMode;
             updateAuthModeUi();
@@ -86,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
         btnAdminLogin = findViewById(R.id.btnAdminLogin);
-        btnOfflineMode = findViewById(R.id.btnOfflineMode);
         tvTitle = findViewById(R.id.tvTitle);
         tvSwitchMode = findViewById(R.id.tvSwitchMode);
     }
@@ -217,6 +214,12 @@ public class MainActivity extends AppCompatActivity {
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) {
+                        // Profile missing, sync it once
+                        syncMemberProfileAndRoute(currentUser, email, false, true, true);
+                        return;
+                    }
+                    
                     String role = snapshot.getString(AuthRoles.FIELD_ROLE);
                     if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
                         setLoading(false);
@@ -226,32 +229,50 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     boolean profileCompleted = Boolean.TRUE.equals(snapshot.getBoolean(FIELD_PROFILE_COMPLETED));
-                    syncMemberProfileAndRoute(currentUser, email, profileCompleted, true, true);
+                    setLoading(false);
+                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
+                    if (profileCompleted) {
+                        navigateToHome();
+                    } else {
+                        navigateToProfileSetup();
+                    }
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    Toast.makeText(this, getString(R.string.role_verify_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Login role check failed", e);
+                    // On error, try to sync or at least get them to home
+                    navigateToHome();
                 });
     }
 
     private void handleExistingSignedInUser(FirebaseUser currentUser) {
-        String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
         firebaseFirestore.collection(FirestoreCollections.USERS)
                 .document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    String role = snapshot.getString(AuthRoles.FIELD_ROLE);
-                    if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
-                        navigateToAdminDashboard();
-                        return;
-                    }
+                    if (snapshot.exists()) {
+                        String role = snapshot.getString(AuthRoles.FIELD_ROLE);
+                        if (AuthRoles.ADMIN.equalsIgnoreCase(role)) {
+                            navigateToAdminDashboard();
+                            return;
+                        }
 
-                    boolean profileCompleted = Boolean.TRUE.equals(snapshot.getBoolean(FIELD_PROFILE_COMPLETED));
-                    syncMemberProfileAndRoute(currentUser, email, profileCompleted, false, false);
+                        boolean profileCompleted = Boolean.TRUE.equals(snapshot.getBoolean(FIELD_PROFILE_COMPLETED));
+                        if (profileCompleted) {
+                            navigateToHome();
+                        } else {
+                            navigateToProfileSetup();
+                        }
+                    } else {
+                        // Profile missing in Firestore, sync it (don't show toast for auto-login)
+                        syncMemberProfileAndRoute(currentUser, currentUser.getEmail(), false, false, false);
+                    }
                 })
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to load role for existing user", e)
-                );
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load profile for existing user", e);
+                    // Just navigate home if we can't verify role (e.g. offline or rule issue)
+                    navigateToHome();
+                });
     }
 
     private void syncMemberProfileAndRoute(
@@ -263,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
     ) {
         String fallbackUsername = currentUser.getDisplayName();
         if (TextUtils.isEmpty(fallbackUsername)) {
-            int atIndex = email.indexOf("@");
+            int atIndex = email != null ? email.indexOf("@") : -1;
             fallbackUsername = atIndex > 0 ? email.substring(0, atIndex) : "climber";
         }
 
@@ -272,6 +293,7 @@ public class MainActivity extends AppCompatActivity {
         userProfile.put("email", email);
         userProfile.put("username", fallbackUsername);
         userProfile.put(AuthRoles.FIELD_ROLE, AuthRoles.USER);
+        userProfile.put(FIELD_PROFILE_COMPLETED, profileCompleted);
         userProfile.put("updatedAt", FieldValue.serverTimestamp());
 
         firebaseFirestore.collection(FirestoreCollections.USERS)
@@ -295,22 +317,19 @@ public class MainActivity extends AppCompatActivity {
                     if (shouldClearLoading) {
                         setLoading(false);
                     }
-                    Log.e(TAG, "Profile write failed on login uid=" + currentUser.getUid(), e);
-                    Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    if (profileCompleted) {
-                        navigateToHome();
-                    } else {
-                        navigateToProfileSetup();
+                    Log.e(TAG, "Profile write failed for uid=" + currentUser.getUid(), e);
+                    // Only show Toast if it's a fresh login attempt
+                    if (showLoginToast) {
+                        Toast.makeText(this, "Profile sync failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     }
+                    navigateToHome();
                 });
     }
 
     private void setLoading(boolean isLoading) {
         btnRegister.setEnabled(!isLoading);
         btnAdminLogin.setEnabled(!isLoading);
-        btnOfflineMode.setEnabled(!isLoading);
         tvSwitchMode.setEnabled(!isLoading);
-        // You might want to add a ProgressBar here in your layout
     }
 
     private void clearInputErrors() {
@@ -352,9 +371,4 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private void startOfflineMode() {
-        OfflineSessionManager.enableOfflineMode(this);
-        Toast.makeText(this, R.string.main_offline_mode_started, Toast.LENGTH_SHORT).show();
-        navigateToHome();
-    }
 }

@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
@@ -15,27 +17,38 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public class RouteLogAdapter extends RecyclerView.Adapter<RouteLogAdapter.RouteLogViewHolder> {
+public class RouteLogAdapter extends ListAdapter<RouteLogEntry, RouteLogAdapter.RouteLogViewHolder> {
+    private static final DiffUtil.ItemCallback<RouteLogEntry> DIFF_CALLBACK = new DiffUtil.ItemCallback<RouteLogEntry>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull RouteLogEntry oldItem, @NonNull RouteLogEntry newItem) {
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull RouteLogEntry oldItem, @NonNull RouteLogEntry newItem) {
+            return Objects.equals(oldItem.getRouteName(), newItem.getRouteName())
+                    && Objects.equals(oldItem.getGrade(), newItem.getGrade())
+                    && oldItem.getAttempts() == newItem.getAttempts()
+                    && Objects.equals(oldItem.getSendStatus(), newItem.getSendStatus())
+                    && oldItem.getSortTimestampMillis() == newItem.getSortTimestampMillis();
+        }
+    };
+
     public interface OnDeleteClickListener {
         void onDeleteClick(RouteLogEntry entry);
     }
 
-    private final List<RouteLogEntry> entries = new ArrayList<>();
+    private static final SimpleDateFormat TIMESTAMP_FORMAT =
+            new SimpleDateFormat("EEE d MMM yyyy, HH:mm", Locale.getDefault());
     private final LayoutInflater layoutInflater;
     private final OnDeleteClickListener onDeleteClickListener;
-    private final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("EEE d MMM yyyy, HH:mm", Locale.getDefault());
 
     public RouteLogAdapter(LayoutInflater layoutInflater, OnDeleteClickListener onDeleteClickListener) {
+        super(DIFF_CALLBACK);
         this.layoutInflater = layoutInflater;
         this.onDeleteClickListener = onDeleteClickListener;
-    }
-
-    public void submitEntries(List<RouteLogEntry> routeEntries) {
-        entries.clear();
-        entries.addAll(routeEntries);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -47,7 +60,7 @@ public class RouteLogAdapter extends RecyclerView.Adapter<RouteLogAdapter.RouteL
 
     @Override
     public void onBindViewHolder(@NonNull RouteLogViewHolder holder, int position) {
-        RouteLogEntry entry = entries.get(position);
+        RouteLogEntry entry = getItem(position);
         holder.tvRouteName.setText(entry.getRouteName());
         holder.tvRouteGrade.setText(
                 holder.itemView.getContext().getString(R.string.route_log_grade_chip_format, entry.getGrade())
@@ -68,17 +81,12 @@ public class RouteLogAdapter extends RecyclerView.Adapter<RouteLogAdapter.RouteL
         holder.btnDeleteRouteEntry.setOnClickListener(view -> onDeleteClickListener.onDeleteClick(entry));
     }
 
-    @Override
-    public int getItemCount() {
-        return entries.size();
-    }
-
     private String formatTimestamp(RouteLogEntry entry) {
         long timestampMillis = entry.getSortTimestampMillis();
         if (timestampMillis <= 0L) {
             return "";
         }
-        return timestampFormat.format(new Date(timestampMillis));
+        return TIMESTAMP_FORMAT.format(new Date(timestampMillis));
     }
 
     static class RouteLogViewHolder extends RecyclerView.ViewHolder {

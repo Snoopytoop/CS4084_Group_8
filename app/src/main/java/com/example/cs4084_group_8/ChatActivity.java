@@ -193,7 +193,7 @@ public class ChatActivity extends AppCompatActivity {
                         });
                     }
 
-                    directMessageAdapter.submitMessages(messages);
+                    directMessageAdapter.submitList(messages);
                     updateOfflineQueueUi();
 
                     boolean hasMessages = !messages.isEmpty();

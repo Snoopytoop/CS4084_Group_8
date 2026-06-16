@@ -77,7 +77,7 @@ public class LeaderboardActivity extends AppCompatActivity {
 
         ImageButton btnNavHome = findViewById(R.id.btnNavHome);
         ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
-        ImageButton btnNavLeaderboard = findViewById(R.id.btnNavLeaderboard);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
         ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
         ShapeableImageView ivNavProfile = findViewById(R.id.ivNavProfile);
 
@@ -105,8 +105,9 @@ public class LeaderboardActivity extends AppCompatActivity {
             startActivity(new Intent(this, SearchActivity.class));
             overridePendingTransition(0, 0);
         });
-        btnNavLeaderboard.setOnClickListener(v -> {
-            // Already on leaderboard
+        btnNavMessages.setOnClickListener(v -> {
+            startActivity(new Intent(this, InboxActivity.class));
+            overridePendingTransition(0, 0);
         });
         btnNavCreatePost.setOnClickListener(v -> {
             startActivity(new Intent(this, CreatePostActivity.class));

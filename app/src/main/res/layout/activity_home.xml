@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/route_log_screen_bg"
     android:padding="24dp">
 
     <LinearLayout
@@ -20,7 +21,8 @@
             android:id="@+id/tvHomeTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ClimbShare"
+            android:text="@string/home_title"
+            android:textColor="@color/route_log_text_primary"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -58,17 +60,23 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
-            android:text="@string/home_route_log_button" />
+            android:minHeight="64dp"
+            android:padding="4dp"
+            android:text="@string/home_route_log_button"
+            android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnQuickMessages"
+            android:id="@+id/btnQuickLeaderboard"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
-            android:text="@string/home_messages_button" />
+            android:minHeight="64dp"
+            android:padding="4dp"
+            android:text="Leaderboard"
+            android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnQuickFindBelayer"
@@ -77,7 +85,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_weight="1"
-            android:text="@string/home_find_belayer_button" />
+            android:minHeight="64dp"
+            android:padding="4dp"
+            android:text="@string/home_find_belayer_button"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
@@ -108,7 +119,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Recent Posts"
+        android:text="@string/home_recent_posts"
+        android:textColor="@color/route_log_text_primary"
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -120,7 +132,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
-        android:text="No posts yet. Tap + to create one."
+        android:text="@string/home_empty_feed"
+        android:textColor="@color/route_log_text_secondary"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

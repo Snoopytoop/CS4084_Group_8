@@ -2,14 +2,24 @@ package com.example.cs4084_group_8;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -23,11 +33,16 @@ public class InboxActivity extends AppCompatActivity {
     private MaterialToolbar toolbarInbox;
     private TextView tvInboxEmpty;
     private RecyclerView rvInboxConversations;
+    private RecyclerView rvUserSearch;
+    private TextInputEditText etInboxSearch;
+    private ShapeableImageView ivNavProfile;
 
     private FirebaseFirestore firestore;
     private FirebaseUser currentUser;
     private ConversationSummaryAdapter conversationSummaryAdapter;
+    private UserSearchAdapter userSearchAdapter;
     private ListenerRegistration conversationsListener;
+    private List<ConversationSummary> allConversations = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +59,9 @@ public class InboxActivity extends AppCompatActivity {
         bindViews();
         configureToolbar();
         configureList();
+        configureSearch();
+        setupNavigation();
+        configureBottomNavInsets();
     }
 
     @Override
@@ -70,11 +88,59 @@ public class InboxActivity extends AppCompatActivity {
         toolbarInbox = findViewById(R.id.toolbarInbox);
         tvInboxEmpty = findViewById(R.id.tvInboxEmpty);
         rvInboxConversations = findViewById(R.id.rvInboxConversations);
+        rvUserSearch = findViewById(R.id.rvUserSearch);
+        etInboxSearch = findViewById(R.id.etInboxSearch);
     }
 
     private void configureToolbar() {
-        toolbarInbox.setNavigationIcon(R.drawable.ic_route_back);
-        toolbarInbox.setNavigationOnClickListener(view -> finish());
+        toolbarInbox.setNavigationIcon(null);
+    }
+
+    private void setupNavigation() {
+        ImageButton btnNavHome = findViewById(R.id.btnNavHome);
+        ImageButton btnNavSearch = findViewById(R.id.btnNavSearch);
+        ImageButton btnNavMessages = findViewById(R.id.btnNavMessages);
+        ImageButton btnNavCreatePost = findViewById(R.id.btnNavCreatePost);
+        ivNavProfile = findViewById(R.id.ivNavProfile);
+
+        btnNavHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, HomeActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        btnNavSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        btnNavMessages.setOnClickListener(v -> {
+            // Already on messages landing page.
+        });
+
+        btnNavCreatePost.setOnClickListener(v -> {
+            startActivity(new Intent(this, CreatePostActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+
+        ivNavProfile.setOnClickListener(v -> {
+            startActivity(new Intent(this, UserProfileActivity.class));
+            finish();
+            overridePendingTransition(0, 0);
+        });
+    }
+
+    private void configureBottomNavInsets() {
+        View bottomNav = findViewById(R.id.bottomNavCard);
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            int bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = 16 + bottomInset;
+            v.setLayoutParams(params);
+            return insets;
+        });
     }
 
     private void configureList() {
@@ -85,6 +151,61 @@ public class InboxActivity extends AppCompatActivity {
                 (conversation, otherUserId, otherUserName) -> openConversation(otherUserId, otherUserName)
         );
         rvInboxConversations.setAdapter(conversationSummaryAdapter);
+
+        rvUserSearch.setLayoutManager(new LinearLayoutManager(this));
+        userSearchAdapter = new UserSearchAdapter();
+        rvUserSearch.setAdapter(userSearchAdapter);
+    }
+
+    private void configureSearch() {
+        etInboxSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String query = s.toString().trim();
+                if (query.isEmpty()) {
+                    rvUserSearch.setVisibility(View.GONE);
+                    boolean hasConversations = !allConversations.isEmpty();
+                    rvInboxConversations.setVisibility(hasConversations ? View.VISIBLE : View.GONE);
+                    tvInboxEmpty.setVisibility(hasConversations ? View.GONE : View.VISIBLE);
+                    if (!hasConversations) tvInboxEmpty.setText(R.string.inbox_empty_state);
+                } else {
+                    rvInboxConversations.setVisibility(View.GONE);
+                    tvInboxEmpty.setVisibility(View.GONE);
+                    rvUserSearch.setVisibility(View.VISIBLE);
+                    searchUsers(query);
+                }
+            }
+        });
+    }
+
+    private void searchUsers(String query) {
+        String queryLower = query.toLowerCase();
+        firestore.collection("users")
+                .orderBy("username")
+                .startAt(query)
+                .endAt(query + "")
+                .limit(20)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    List<UserSearchResult> results = new ArrayList<>();
+                    snap.getDocuments().forEach(doc -> {
+                        String uid = doc.getId();
+                        String username = doc.getString("username");
+                        if (username != null && !uid.equals(currentUser.getUid())) {
+                            results.add(new UserSearchResult(uid, username));
+                        }
+                    });
+                    userSearchAdapter.setResults(results);
+                    if (results.isEmpty()) {
+                        tvInboxEmpty.setText("No users found");
+                        tvInboxEmpty.setVisibility(View.VISIBLE);
+                    } else {
+                        tvInboxEmpty.setVisibility(View.GONE);
+                    }
+                });
     }
 
     private void listenForConversations() {
@@ -105,29 +226,33 @@ public class InboxActivity extends AppCompatActivity {
                         return;
                     }
 
-                    List<ConversationSummary> conversations = new ArrayList<>();
+                    allConversations.clear();
                     if (value != null) {
                         value.getDocuments().forEach(documentSnapshot -> {
                             ConversationSummary conversation = documentSnapshot.toObject(ConversationSummary.class);
                             if (conversation != null) {
                                 conversation.setId(documentSnapshot.getId());
-                                conversations.add(conversation);
+                                allConversations.add(conversation);
                             }
                         });
                     }
 
-                    conversations.sort(Comparator.comparing(
+                    allConversations.sort(Comparator.comparing(
                             ConversationSummary::getLastMessageAt,
                             Comparator.nullsLast(Comparator.naturalOrder())
                     ).reversed());
 
-                    conversationSummaryAdapter.submitConversations(conversations);
-
-                    boolean hasConversations = !conversations.isEmpty();
-                    rvInboxConversations.setVisibility(hasConversations ? RecyclerView.VISIBLE : RecyclerView.GONE);
-                    tvInboxEmpty.setVisibility(hasConversations ? TextView.GONE : TextView.VISIBLE);
-                    if (!hasConversations) {
-                        tvInboxEmpty.setText(R.string.inbox_empty_state);
+                    // Only update conversation list if search is not active
+                    String searchText = etInboxSearch != null && etInboxSearch.getText() != null
+                            ? etInboxSearch.getText().toString().trim() : "";
+                    if (searchText.isEmpty()) {
+                        conversationSummaryAdapter.submitList(allConversations);
+                        boolean hasConversations = !allConversations.isEmpty();
+                        rvInboxConversations.setVisibility(hasConversations ? RecyclerView.VISIBLE : RecyclerView.GONE);
+                        tvInboxEmpty.setVisibility(hasConversations ? TextView.GONE : TextView.VISIBLE);
+                        if (!hasConversations) tvInboxEmpty.setText(R.string.inbox_empty_state);
+                    } else {
+                        conversationSummaryAdapter.submitList(allConversations);
                     }
                 });
     }
@@ -148,5 +273,52 @@ public class InboxActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private static class UserSearchResult {
+        final String uid;
+        final String username;
+
+        UserSearchResult(String uid, String username) {
+            this.uid = uid;
+            this.username = username;
+        }
+    }
+
+    private class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.VH> {
+        private List<UserSearchResult> results = new ArrayList<>();
+
+        void setResults(List<UserSearchResult> newResults) {
+            results = newResults;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public VH onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(android.R.layout.simple_list_item_1, parent, false);
+            ((TextView) view.findViewById(android.R.id.text1))
+                    .setTextColor(getResources().getColor(R.color.route_log_text_primary, getTheme()));
+            view.setPadding(48, 32, 48, 32);
+            return new VH(view);
+        }
+
+        @Override
+        public void onBindViewHolder(VH holder, int position) {
+            UserSearchResult result = results.get(position);
+            holder.tvName.setText(result.username);
+            holder.itemView.setOnClickListener(v -> openConversation(result.uid, result.username));
+        }
+
+        @Override
+        public int getItemCount() { return results.size(); }
+
+        class VH extends RecyclerView.ViewHolder {
+            final TextView tvName;
+            VH(View v) {
+                super(v);
+                tvName = v.findViewById(android.R.id.text1);
+            }
+        }
     }
 }
